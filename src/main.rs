@@ -2,6 +2,7 @@ use std::{
 	env,
 	fs::File,
 	io::{BufRead, BufReader, BufWriter, Write},
+	time::Instant,
 };
 
 mod cli;
@@ -11,6 +12,7 @@ use cli::{exit_with_error, help, Settings};
 use csv::CsvLine;
 
 fn main() {
+	let time = Instant::now();
 	let settings = Settings::new(env::args().skip(1).collect());
 
 	if settings.version {
@@ -66,5 +68,7 @@ fn main() {
 	if let Err(error) = writer.flush() {
 		eprintln!("Error: Failed to flush output file: {}", error);
 		exit_with_error(1);
+	} else {
+		println!("File successfully written to {:?}\nTime: {:#?}", settings.output, time.elapsed())
 	}
 }

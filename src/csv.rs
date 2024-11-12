@@ -126,7 +126,6 @@ mod tests {
 	#[test]
 	fn parse_line_test() {
 		assert_eq!(CsvLine::parse_line("1,2,3"), vec![String::from("1"), String::from("2"), String::from("3")]);
-		// assert_eq!(CsvLine::parse_line(r#"test,"#), vec![String::from("1"), String::from("2"), String::from("3")]);
 	}
 
 	#[test]
