@@ -44,6 +44,8 @@ fn main() {
 	let mut writer = BufWriter::new(output_file);
 
 	let mut line = String::new();
+	let mut is_heading = true;
+	let mut csv = CsvLine::new();
 
 	loop {
 		line.clear();
@@ -59,10 +61,12 @@ fn main() {
 			break;
 		}
 
-		if let Err(error) = writer.write_all(CsvLine::new(line.trim()).process().export().as_bytes()) {
+		if let Err(error) = writer.write_all(csv.parse_line(line.trim(), is_heading).process().export().as_bytes()) {
 			eprintln!("Error: Failed to write to output file: {}", error);
 			exit_with_error(1);
 		}
+
+		is_heading = false;
 	}
 
 	if let Err(error) = writer.flush() {

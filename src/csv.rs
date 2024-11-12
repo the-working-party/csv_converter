@@ -4,13 +4,11 @@ pub struct CsvLine {
 }
 
 impl CsvLine {
-	pub fn new(line: &str) -> Self {
-		Self {
-			line: Self::parse_line(line),
-		}
+	pub fn new() -> Self {
+		Self { line: Vec::new() }
 	}
 
-	pub fn parse_line(line: &str) -> Vec<String> {
+	pub fn parse_line(&mut self, line: &str, _is_heading: bool) -> Self {
 		let mut cells = Vec::new();
 		let mut in_quotes = false;
 		let mut cell = String::new();
@@ -38,14 +36,16 @@ impl CsvLine {
 			}
 		}
 		cells.push(cell);
-		cells
+		Self { line: cells }
 	}
 
-	pub fn process(mut self) -> Self {
-		for _cell in &mut self.line {
-			// TODO: do the processing here
+	pub fn process(&mut self) -> Self {
+		// for _cell in self.line {
+		// 	// TODO: do the processing here
+		// }
+		Self {
+			line: self.line.clone(),
 		}
-		self
 	}
 
 	fn quote_csv_cell(cell: &str) -> String {
@@ -105,14 +105,21 @@ mod tests {
 
 	#[test]
 	fn new_test() {
+		assert_eq!(CsvLine::new(), CsvLine { line: Vec::new() });
+	}
+
+	#[test]
+	fn parse_line_test() {
+		let mut csv = CsvLine::new();
 		assert_eq!(
-			CsvLine::new("1,2,3"),
+			csv.parse_line("1,2,3", false),
 			CsvLine {
-				line: vec![String::from("1"), String::from("2"), String::from("3"),]
+				line: vec![String::from("1"), String::from("2"), String::from("3")]
 			}
 		);
+
 		assert_eq!(
-			CsvLine::new(r#"Jane Doe,"123 Main St, Apt 4","Likes to say ""Hello, World!""""#),
+			csv.parse_line(r#"Jane Doe,"123 Main St, Apt 4","Likes to say ""Hello, World!""""#, false),
 			CsvLine {
 				line: vec![
 					String::from("Jane Doe"),
@@ -121,11 +128,6 @@ mod tests {
 				]
 			}
 		);
-	}
-
-	#[test]
-	fn parse_line_test() {
-		assert_eq!(CsvLine::parse_line("1,2,3"), vec![String::from("1"), String::from("2"), String::from("3")]);
 	}
 
 	#[test]
@@ -138,7 +140,9 @@ mod tests {
 
 	#[test]
 	fn export_test() {
-		assert_eq!(CsvLine::new("1,2,3").export(), String::from("1,2,3\n"));
-		assert_eq!(CsvLine::new(r#"test,"te""st""#).export(), String::from("test,\"te\"\"st\"\n"));
+		let mut csv = CsvLine::new();
+		assert_eq!(csv.parse_line("1,2,3", false).export(), String::from("1,2,3\n"));
+
+		assert_eq!(csv.parse_line(r#"test,"te""st""#, false).export(), String::from("test,\"te\"\"st\"\n"));
 	}
 }
