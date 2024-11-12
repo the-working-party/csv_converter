@@ -35,6 +35,7 @@ cargo install csv2matrixify
 git clone https://github.com/the-working-party/csv2matrixify.git
 cd csv2matrixify
 cargo build --release
+# Now run the app via "cargo run --release" instead of "csv2matrixify" or locate the binary in your target folder
 ```
 
 ## Usage
