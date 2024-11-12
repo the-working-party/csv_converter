@@ -1,0 +1,19 @@
+[package]
+name = "csv2matrixify"
+version = "1.0.0"
+edition = "2021"
+authors = [
+	"Dominik Wilkowski <Hi@Dominik-Wilkowski.com>",
+]
+license = "GPL-3.0-or-later"
+description = "A vault GUI for your offline passwords"
+homepage = "https://github.com/the-working-party/csv2matrixify"
+repository = "https://github.com/the-working-party/csv2matrixify"
+keywords = [
+	"cli",
+	"matrixify",
+	"shopify",
+	"twp",
+]
+
+[dependencies]
