@@ -1,3 +1,5 @@
 Name,Command,Note,Address
 Jane Doe,NEW,"Likes to say ""Hello, World!""","123 Main St, Apt 4"
 Jane Doe,MERGE,"Likes to say ""Hello, World!""","123 Main St, Apt 4"
+John Doe,NEW,He's ok,42 Willborough St
+John Doe,MERGE,He's ok,42 Willborough St

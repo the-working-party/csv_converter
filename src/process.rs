@@ -1,11 +1,11 @@
 use crate::{
 	cli::exit_with_error,
-	config::{Config, Item},
+	config::{Item, OutputConfig},
 };
 
-pub fn run(input_line: &[Vec<String>], config: &Config) -> Vec<Vec<String>> {
+pub fn run(input_line: &[Vec<String>], output_config: &OutputConfig) -> Vec<Vec<String>> {
 	let mut new_lines = Vec::new();
-	for items in config.lines.clone() {
+	for items in output_config.lines.clone() {
 		let mut line: Vec<String> = Vec::new();
 		for item in items {
 			match item {
@@ -13,6 +13,7 @@ pub fn run(input_line: &[Vec<String>], config: &Config) -> Vec<Vec<String>> {
 					Some(v) => line.push(v.clone()),
 					None => {
 						eprintln!("Process error: Cell not found '{item}'");
+						eprintln!("{input_line:?}");
 						exit_with_error(1);
 					},
 				},
@@ -35,7 +36,7 @@ mod tests {
 		assert_eq!(
 			run(
 				&vec![vec![String::from("A"), String::from("B"), String::from("C")]],
-				&Config {
+				&OutputConfig {
 					heading: String::new(),
 					lines: vec![vec![Item::Cell(0), Item::Cell(2), Item::Cell(1)]],
 				},
@@ -49,7 +50,7 @@ mod tests {
 		assert_eq!(
 			run(
 				&vec![vec![String::from("A"), String::from("B"), String::from("C")]],
-				&Config {
+				&OutputConfig {
 					heading: String::new(),
 					lines: vec![vec![Item::Value(String::from("NEW")), Item::Cell(2), Item::Cell(1)]],
 				},
@@ -63,7 +64,7 @@ mod tests {
 		assert_eq!(
 			run(
 				&vec![vec![String::from("A"), String::from("B"), String::from("C")]],
-				&Config {
+				&OutputConfig {
 					heading: String::new(),
 					lines: vec![
 						vec![Item::Cell(0), Item::Cell(2), Item::Cell(1)],
@@ -83,7 +84,7 @@ mod tests {
 		assert_eq!(
 			run(
 				&vec![vec![String::from("A"), String::from("B"), String::from("C")]],
-				&Config {
+				&OutputConfig {
 					heading: String::new(),
 					lines: vec![
 						vec![Item::Cell(0), Item::Cell(2), Item::Cell(1)],

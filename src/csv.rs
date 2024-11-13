@@ -1,17 +1,78 @@
-use crate::{config::Config, process};
+use std::io::BufRead;
+
+use crate::{cli::exit_with_error, cli::Settings, config::OutputConfig, process};
 
 #[derive(Debug, PartialEq)]
 pub struct CsvLine {
-	config: Config,
+	output_config: OutputConfig,
 	cell: String,
 	lines: Vec<Vec<String>>,
 	output: String,
 }
 
 impl CsvLine {
-	pub fn new(config: Config) -> Self {
+	pub fn read_csv_record<R: BufRead>(
+		reader: &mut R,
+		line: &mut String,
+		temp_line: &mut String,
+		bytes_read: &mut u128,
+		settings: &Settings,
+	) -> bool {
+		line.clear();
+		let mut in_quotes = false;
+
+		loop {
+			temp_line.clear();
+			let bytes = match reader.read_line(temp_line) {
+				Ok(bytes) => bytes,
+				Err(error) => {
+					eprintln!("Error: Failed to read from input file '{}': {error}", settings.input);
+					exit_with_error(1);
+				},
+			};
+
+			if bytes == 0 {
+				if line.is_empty() {
+					return false;
+				} else {
+					break;
+				}
+			}
+
+			*bytes_read += bytes as u128;
+
+			if !line.is_empty() {
+				line.push('\n');
+			}
+			line.push_str(temp_line);
+
+			let mut i = 0;
+			let bytes = temp_line.as_bytes();
+			while i < bytes.len() {
+				if bytes[i] == b'"' {
+					let mut quote_count = 1;
+					while i + 1 < bytes.len() && bytes[i + 1] == b'"' {
+						quote_count += 1;
+						i += 1;
+					}
+					if quote_count % 2 != 0 {
+						in_quotes = !in_quotes;
+					}
+				}
+				i += 1;
+			}
+
+			if !in_quotes {
+				break;
+			}
+		}
+
+		true
+	}
+
+	pub fn new(output_config: OutputConfig) -> Self {
 		Self {
-			config,
+			output_config,
 			cell: String::new(),
 			lines: Vec::new(),
 			output: String::new(),
@@ -20,7 +81,7 @@ impl CsvLine {
 
 	pub fn parse_line(&mut self, line: &str, is_heading: bool) -> String {
 		if is_heading {
-			return format!("{}\n", self.config.heading);
+			return format!("{}\n", self.output_config.heading);
 		}
 
 		self.lines.clear();
@@ -51,7 +112,7 @@ impl CsvLine {
 			}
 		}
 		line.push(std::mem::take(&mut self.cell));
-		self.lines = process::run(&[line], &self.config);
+		self.lines = process::run(&[line], &self.output_config);
 		self.export()
 	}
 
@@ -114,18 +175,56 @@ impl CsvLine {
 mod tests {
 	use super::*;
 	use crate::config::Item;
+	use std::{fs::File, io::BufReader};
+
+	#[test]
+	fn read_csv_record_test() {
+		let input_file = match File::open("tests/input.csv") {
+			Ok(file) => file,
+			Err(_) => {
+				exit_with_error(1);
+			},
+		};
+		let mut reader = BufReader::new(input_file);
+		let mut line = String::new();
+		let mut temp_line = String::new();
+		let mut bytes_read: u128 = 0;
+		let settings = Settings {
+			input: String::new(),
+			output: String::new(),
+			output_config: String::new(),
+			version: false,
+			help: false,
+		};
+
+		let result = CsvLine::read_csv_record(&mut reader, &mut line, &mut temp_line, &mut bytes_read, &settings);
+		assert_eq!(result, true);
+		assert_eq!(line, String::from("Name,Address,Note,HTML\n"));
+
+		let result = CsvLine::read_csv_record(&mut reader, &mut line, &mut temp_line, &mut bytes_read, &settings);
+		assert_eq!(result, true);
+		assert_eq!(line, String::from("Jane Doe,\"123 Main St, Apt 4\",\"Likes to say \"\"Hello, World!\"\"\",\"<ul>\n\n<li>A</li>\n\n<li>B</li>\n\n</ul>\"\n"));
+
+		let result = CsvLine::read_csv_record(&mut reader, &mut line, &mut temp_line, &mut bytes_read, &settings);
+		assert_eq!(result, true);
+		assert_eq!(line, String::from("John Doe,42 Willborough St,He's ok,\"<span></span>\"\n"));
+
+		let result = CsvLine::read_csv_record(&mut reader, &mut line, &mut temp_line, &mut bytes_read, &settings);
+		assert_eq!(result, false);
+		assert_eq!(line, String::new());
+	}
 
 	#[test]
 	fn new_test() {
-		let config = Config {
+		let output_config = OutputConfig {
 			heading: String::from("heading"),
 			lines: Vec::new(),
 		};
 
 		assert_eq!(
-			CsvLine::new(config.clone()),
+			CsvLine::new(output_config.clone()),
 			CsvLine {
-				config,
+				output_config,
 				cell: String::new(),
 				lines: Vec::new(),
 				output: String::new(),
@@ -135,7 +234,7 @@ mod tests {
 
 	#[test]
 	fn parse_line_test() {
-		let mut csv = CsvLine::new(Config {
+		let mut csv = CsvLine::new(OutputConfig {
 			heading: String::from("h1,h2,h3"),
 			lines: vec![vec![Item::Cell(0), Item::Cell(1), Item::Cell(2)]],
 		});
@@ -159,7 +258,7 @@ mod tests {
 	fn export_test() {
 		assert_eq!(
 			CsvLine {
-				config: Config::default(),
+				output_config: OutputConfig::default(),
 				cell: String::new(),
 				lines: Vec::new(),
 				output: String::new(),
@@ -170,7 +269,7 @@ mod tests {
 
 		assert_eq!(
 			CsvLine {
-				config: Config::default(),
+				output_config: OutputConfig::default(),
 				cell: String::new(),
 				lines: vec![
 					vec![String::from("A"), String::from("B"), String::from("C")],

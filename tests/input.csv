@@ -1,2 +1,6 @@
-Name,Address,Note
-Jane Doe,"123 Main St, Apt 4","Likes to say ""Hello, World!"""
+Name,Address,Note,HTML
+Jane Doe,"123 Main St, Apt 4","Likes to say ""Hello, World!""","<ul>
+<li>A</li>
+<li>B</li>
+</ul>"
+John Doe,42 Willborough St,He's ok,"<span></span>"

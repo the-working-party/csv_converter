@@ -20,12 +20,12 @@ impl fmt::Display for Item {
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
-pub struct Config {
+pub struct OutputConfig {
 	pub heading: String,
 	pub lines: Vec<Vec<Item>>,
 }
 
-impl Config {
+impl OutputConfig {
 	pub fn new(config: &str) -> Self {
 		let mut config_lines = config.lines();
 		let heading;
@@ -34,7 +34,7 @@ impl Config {
 		if let Some(header_line) = config_lines.next() {
 			heading = header_line.to_string();
 		} else {
-			eprintln!("Config error: No content found");
+			eprintln!("OutputConfig error: No content found");
 			exit_with_error(1);
 		}
 
@@ -46,11 +46,11 @@ impl Config {
 					match num_str.parse::<usize>() {
 						Ok(n) if n > 0 => cells.push(Item::Cell(n - 1)),
 						Ok(_) => {
-							eprintln!("Config error: Cell number must be positive for item '{cell}'");
+							eprintln!("OutputConfig error: Cell number must be positive for item '{cell}'");
 							exit_with_error(1);
 						},
 						Err(_) => {
-							eprintln!("Config error: Invalid cell number '{cell}'");
+							eprintln!("OutputConfig error: Invalid cell number '{cell}'");
 							exit_with_error(1);
 						},
 					};
@@ -80,16 +80,16 @@ mod tests {
 	#[test]
 	fn new_test() {
 		assert_eq!(
-			Config::new("headine1,heading2,heading3\n<cell1>,<cell2>,<cell3>\n"),
-			Config {
+			OutputConfig::new("headine1,heading2,heading3\n<cell1>,<cell2>,<cell3>\n"),
+			OutputConfig {
 				heading: String::from("headine1,heading2,heading3"),
 				lines: vec![vec![Item::Cell(0), Item::Cell(1), Item::Cell(2),]],
 			}
 		);
 
 		assert_eq!(
-			Config::new("h1,h2,h3,h4\n<cell1>,,hardcoded,=IF(my condition)\n"),
-			Config {
+			OutputConfig::new("h1,h2,h3,h4\n<cell1>,,hardcoded,=IF(my condition)\n"),
+			OutputConfig {
 				heading: String::from("h1,h2,h3,h4"),
 				lines: vec![vec![
 					Item::Cell(0),

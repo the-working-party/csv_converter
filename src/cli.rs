@@ -2,7 +2,7 @@
 pub struct Settings {
 	pub input: String,
 	pub output: String,
-	pub config: String,
+	pub output_config: String,
 	pub version: bool,
 	pub help: bool,
 }
@@ -38,7 +38,7 @@ impl Settings {
 						eprintln!("Error: Expected an argument after '{arg}'");
 						exit_with_error(1);
 					} else {
-						settings.config = item.unwrap();
+						settings.output_config = item.unwrap();
 					}
 				},
 				"-v" | "-V" | "--version" => {
@@ -63,7 +63,7 @@ impl Settings {
 			exit_with_error(1);
 		}
 
-		if settings.config.is_empty() && !settings.version && !settings.help {
+		if settings.output_config.is_empty() && !settings.version && !settings.help {
 			eprintln!("Error: Missing parameter 'config'");
 			println!("{}", usage());
 			exit_with_error(1);
@@ -91,7 +91,7 @@ mod tests {
 			Settings {
 				input: String::from("input_file.csv"),
 				output: String::from("output_file.csv"),
-				config: String::from("config_file.csv"),
+				output_config: String::from("config_file.csv"),
 				version: false,
 				help: false,
 			}
@@ -112,7 +112,7 @@ mod tests {
 			Settings {
 				input: String::from("input_file.csv"),
 				output: String::from("output_file.csv"),
-				config: String::from("config_file.csv"),
+				output_config: String::from("config_file.csv"),
 				version: false,
 				help: false,
 			}
