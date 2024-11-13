@@ -22,6 +22,7 @@ Imagine you scrape a website with your favorite scraper and now have this huge s
 ![The input csv](assets/input.png)
 <details>
 <summary>View the code</summary>
+
 ```csv
 URL,name,image1,image2,image3,SKU,description,data1,data2,variant1,variant2
 https://myshop.tld/product/berta2-green-holster,Berta2,https://cdn.myshop.tld/img1.jpg,https://cdn.myshop.tld/img2.jpg,https://cdn.myshop.tld/img3.jpg,berta2,Berta2 is the new and improved berta,,,black,green
@@ -36,6 +37,7 @@ A good matrixify spreadsheet for the above data could be this sheet:
 ![The output csv](assets/output.png)
 <details>
 <summary>View the code</summary>
+
 ```csv
 Handle,Command,Name,Description,Variant ID,Variant Command,Option1 Name,Option1 Value
 berta2,NEW,Berta2,Berta2 is the new and improved berta,,MERGE,Material,black
@@ -51,6 +53,7 @@ With `csv2matrixify` you can do this by creating a config spreadsheet like this:
 ![The config csv](assets/config.png)
 <details>
 <summary>View the code</summary>
+
 ```csv
 Handle,Command,Name,Description,Variant ID,Variant Command,Option1 Name,Option1 Value
 <cell6>,NEW,<cell2>,<cell7>,,MERGE,Material,<cell10>
