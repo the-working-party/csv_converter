@@ -2,6 +2,7 @@
 pub struct Settings {
 	pub input: String,
 	pub output: String,
+	pub config: String,
 	pub version: bool,
 	pub help: bool,
 }
@@ -31,6 +32,15 @@ impl Settings {
 						settings.output = item.unwrap();
 					}
 				},
+				"-c" | "--config" => {
+					let item = args_iter.next();
+					if item.is_none() {
+						eprintln!("Error: Expected an argument after '{arg}'");
+						exit_with_error(1);
+					} else {
+						settings.config = item.unwrap();
+					}
+				},
 				"-v" | "-V" | "--version" => {
 					settings.version = true;
 				},
@@ -53,6 +63,12 @@ impl Settings {
 			exit_with_error(1);
 		}
 
+		if settings.config.is_empty() && !settings.version && !settings.help {
+			eprintln!("Error: Missing parameter 'config'");
+			println!("{}", usage());
+			exit_with_error(1);
+		}
+
 		settings
 	}
 }
@@ -68,11 +84,14 @@ mod tests {
 				String::from("-i"),
 				String::from("input_file.csv"),
 				String::from("-o"),
-				String::from("output_file.csv")
+				String::from("output_file.csv"),
+				String::from("-c"),
+				String::from("config_file.csv"),
 			]),
 			Settings {
 				input: String::from("input_file.csv"),
 				output: String::from("output_file.csv"),
+				config: String::from("config_file.csv"),
 				version: false,
 				help: false,
 			}
@@ -86,11 +105,14 @@ mod tests {
 				String::from("--input"),
 				String::from("input_file.csv"),
 				String::from("--output"),
-				String::from("output_file.csv")
+				String::from("output_file.csv"),
+				String::from("--config"),
+				String::from("config_file.csv"),
 			]),
 			Settings {
 				input: String::from("input_file.csv"),
 				output: String::from("output_file.csv"),
+				config: String::from("config_file.csv"),
 				version: false,
 				help: false,
 			}
@@ -100,30 +122,61 @@ mod tests {
 	#[test]
 	#[should_panic]
 	fn missing_input_shortcut_test() {
-		Settings::new(vec![String::from("-o"), String::from("output_file.csv")]);
+		Settings::new(vec![
+			String::from("-o"),
+			String::from("output_file.csv"),
+			String::from("-c"),
+			String::from("config_file.csv"),
+		]);
 	}
 
 	#[test]
 	#[should_panic]
 	fn missing_input_longform_test() {
-		Settings::new(vec![String::from("--output"), String::from("output_file.csv")]);
+		Settings::new(vec![
+			String::from("--output"),
+			String::from("output_file.csv"),
+			String::from("--config"),
+			String::from("config_file.csv"),
+		]);
 	}
 
 	#[test]
 	#[should_panic]
 	fn missing_output_shortcut_test() {
-		Settings::new(vec![String::from("-i"), String::from("input_file.csv")]);
+		Settings::new(vec![
+			String::from("-i"),
+			String::from("input_file.csv"),
+			String::from("-c"),
+			String::from("config_file.csv"),
+		]);
 	}
 
 	#[test]
 	#[should_panic]
 	fn missing_output_longform_test() {
-		Settings::new(vec![String::from("--input"), String::from("input_file.csv")]);
+		Settings::new(vec![
+			String::from("--input"),
+			String::from("input_file.csv"),
+			String::from("--config"),
+			String::from("config_file.csv"),
+		]);
 	}
 
 	#[test]
 	#[should_panic]
-	fn missing_both_test() {
+	fn missing_config_shortcut_test() {
+		Settings::new(vec![
+			String::from("-i"),
+			String::from("input_file.csv"),
+			String::from("-o"),
+			String::from("output_file.csv"),
+		]);
+	}
+
+	#[test]
+	#[should_panic]
+	fn missing_all_test() {
 		Settings::new(Vec::new());
 	}
 }
@@ -149,6 +202,8 @@ Options:
         Specify the input file to process.
   -o <file>, --output <file>
         Specify the output file to write results to.
+  -c <file>, --config <file>
+        Specify the config file to determin what the output format is.
   -v, -V, --version
         Display the program's version information.
   -h, --help

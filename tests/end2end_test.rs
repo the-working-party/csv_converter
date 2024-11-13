@@ -6,6 +6,7 @@ use std::process::Command;
 fn test_csv2matrixify_end_to_end() {
 	let input_file = "tests/input.csv";
 	let output_file = "tests/output.csv";
+	let config_file = "tests/config.csv";
 	let expected_output_file = "tests/expected_output.csv";
 
 	if Path::new(output_file).exists() {
@@ -17,6 +18,8 @@ fn test_csv2matrixify_end_to_end() {
 		.arg(input_file)
 		.arg("-o")
 		.arg(output_file)
+		.arg("-c")
+		.arg(config_file)
 		.output()
 		.expect("Failed to execute csv2matrixify");
 

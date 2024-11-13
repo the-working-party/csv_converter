@@ -1,6 +1,6 @@
 use std::{
 	env,
-	fs::File,
+	fs::{read_to_string, File},
 	io::{BufRead, BufReader, BufWriter, Write},
 	time::Instant,
 };
@@ -43,9 +43,17 @@ fn main() {
 	};
 	let mut writer = BufWriter::new(output_file);
 
+	let config = match read_to_string(&settings.config) {
+		Ok(contents) => contents,
+		Err(error) => {
+			eprintln!("Error: Could not create output file '{}': {}", settings.output, error);
+			exit_with_error(1);
+		},
+	};
+
 	let mut line = String::new();
 	let mut is_heading = true;
-	let mut csv = CsvLine::new();
+	let mut csv = CsvLine::new(config);
 
 	loop {
 		line.clear();
@@ -61,7 +69,7 @@ fn main() {
 			break;
 		}
 
-		if let Err(error) = writer.write_all(csv.parse_line(line.trim(), is_heading).process().export().as_bytes()) {
+		if let Err(error) = writer.write_all(csv.parse_line(line.trim(), is_heading).as_bytes()) {
 			eprintln!("Error: Failed to write to output file: {}", error);
 			exit_with_error(1);
 		}
