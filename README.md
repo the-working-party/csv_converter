@@ -155,7 +155,7 @@ Options:
 Example command:
 
 ```sh
-csv2matrixify -i input.csv -o output.csv
+csv2matrixify -i input.csv -o output.csv -c config.csv
 ```
 
 ## Installation
