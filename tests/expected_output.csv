@@ -1,2 +1,3 @@
-Name,Address,Note
-Jane Doe,"123 Main St, Apt 4","Likes to say ""Hello, World!"""
+Name,Command,Note,Address
+Jane Doe,NEW,"Likes to say ""Hello, World!""","123 Main St, Apt 4"
+Jane Doe,MERGE,"Likes to say ""Hello, World!""","123 Main St, Apt 4"

@@ -12,9 +12,74 @@ This tool streamlines the process of preparing bulk data for Shopify, making it 
 
 ## Features
 
-- **Easy Conversion**: Transform standard CSV files into Matrixify-compatible CSVs with a single command.
+- **Easy Conversion**: Transform standard CSV files into Matrixify-compatible CSVs with a config file easily written with any spreadsheet processor.
 - **Fast Processing**: Leverages Rust's performance to handle *very* large files efficiently.
 - **No dependencies**: This app uses no external crates.
+
+## How does it work?
+
+Imagine you scrape a website with your favorite scraper and now have this huge spreadsheet with a lot of data.
+```csv
+URL,name,image1,image2,image3,SKU,description,data1,data2,variant1,variant2
+https://myshop.tld/product/berta2-green-holster,Berta2,https://cdn.myshop.tld/img1.jpg,https://cdn.myshop.tld/img2.jpg,https://cdn.myshop.tld/img3.jpg,berta2,Berta2 is the new and improved berta,,,black,green
+https://myshop.tld/product/susan-organic,Susan,https://cdn.myshop.tld/img1.jpg,https://cdn.myshop.tld/img2.jpg,https://cdn.myshop.tld/img3.jpg,susan,Buy Susan,,,organic,toxic
+```
+
+These spreadsheet can be very large and contain many cells that you may not even need.
+Others need to be reshuffled or split into it's own line etc.
+
+A good matrixify spreadsheet for the above data could be this sheet:
+```csv
+Handle,Command,Name,Description,Variant ID,Variant Command,Option1 Name,Option1 Value
+berta2,NEW,Berta2,Berta2 is the new and improved berta,,MERGE,Material,black
+berta2,MERGE,,,,MERGE,Material,green
+susan,NEW,Susan,Buy Susan,,MERGE,Material,organic
+berta2,MERGE,,,,MERGE,Material,toxic
+```
+
+You have to split off each line into two and make sure you select the right items with the right headlines.
+
+With `csv2matrixify` you can do this by creating a config spreadsheet like this:
+```csv
+Handle,Command,Name,Description,Variant ID,Variant Command,Option1 Name,Option1 Value
+<cell6>,NEW,<cell2>,<cell7>,,MERGE,Material,<cell10>
+<cell6>,MERGE,,,,MERGE,Material,<cell11>
+```
+
+The first line of the config is the heading you like.
+No changes will be made to it.
+
+All lines after are free for you to allocate.
+You reference cells by using the `<cell[x]>` token.
+The reference is pointing to a single line from your import.
+
+TODO:
+- [ ] Add `=IF` support for cells for logic support
+- [ ] Add support for string manipulation on `<cell>`
+
+## Usage
+
+```sh
+csv2matrixify [OPTIONS]
+
+Options:
+  -i <file>, --input <file>
+        Specify the input file to process.
+  -o <file>, --output <file>
+        Specify the output file to write results to.
+  -c <file>, --config <file>
+        Specify the config file to determin what the output format is.
+  -v, -V, --version
+        Display the program's version information.
+  -h, --help
+        Display this help message.
+```
+
+Example command:
+
+```sh
+csv2matrixify -i input.csv -o output.csv
+```
 
 ## Installation
 
@@ -36,28 +101,6 @@ git clone https://github.com/the-working-party/csv2matrixify.git
 cd csv2matrixify
 cargo build --release
 # Now run the app via "cargo run --release" instead of "csv2matrixify" or locate the binary in your target folder
-```
-
-## Usage
-
-```sh
-csv2matrixify [OPTIONS]
-
-Options:
-  -i <file>, --input <file>
-        Specify the input file to process.
-  -o <file>, --output <file>
-        Specify the output file to write results to.
-  -v, -V, --version
-        Display the program's version information.
-  -h, --help
-        Display this help message.
-```
-
-Example command:
-
-```sh
-csv2matrixify -i input.csv -o output.csv
 ```
 
 ## Contributing

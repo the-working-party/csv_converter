@@ -6,10 +6,15 @@ use std::{
 };
 
 mod cli;
+mod config;
 mod csv;
+mod process;
 
-use cli::{exit_with_error, help, Settings};
-use csv::CsvLine;
+use crate::{
+	cli::{exit_with_error, help, Settings},
+	config::Config,
+	csv::CsvLine,
+};
 
 fn main() {
 	let time = Instant::now();
@@ -44,7 +49,7 @@ fn main() {
 	let mut writer = BufWriter::new(output_file);
 
 	let config = match read_to_string(&settings.config) {
-		Ok(contents) => contents,
+		Ok(contents) => Config::new(&contents),
 		Err(error) => {
 			eprintln!("Error: Could not create output file '{}': {}", settings.output, error);
 			exit_with_error(1);

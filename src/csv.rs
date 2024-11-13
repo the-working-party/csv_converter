@@ -1,26 +1,33 @@
+use crate::{config::Config, process};
+
 #[derive(Debug, PartialEq)]
 pub struct CsvLine {
-	config: String,
+	config: Config,
 	cell: String,
-	line: Vec<String>,
+	lines: Vec<Vec<String>>,
 	output: String,
 }
 
 impl CsvLine {
-	pub fn new(config: String) -> Self {
+	pub fn new(config: Config) -> Self {
 		Self {
 			config,
 			cell: String::new(),
-			line: Vec::new(),
+			lines: Vec::new(),
 			output: String::new(),
 		}
 	}
 
-	pub fn parse_line(&mut self, line: &str, _is_heading: bool) -> String {
-		self.line.clear();
+	pub fn parse_line(&mut self, line: &str, is_heading: bool) -> String {
+		if is_heading {
+			return format!("{}\n", self.config.heading);
+		}
+
+		self.lines.clear();
 		self.cell.clear();
 		let mut in_quotes = false;
 		let mut chars = line.chars().peekable();
+		let mut line = Vec::new();
 
 		while let Some(c) = chars.next() {
 			match c {
@@ -37,21 +44,15 @@ impl CsvLine {
 					}
 				},
 				',' if !in_quotes => {
-					self.line.push(std::mem::take(&mut self.cell));
+					line.push(std::mem::take(&mut self.cell));
 					self.cell.clear();
 				},
 				_ => self.cell.push(c),
 			}
 		}
-		self.line.push(std::mem::take(&mut self.cell));
-		self.process();
+		line.push(std::mem::take(&mut self.cell));
+		self.lines = process::run(&[line], &self.config);
 		self.export()
-	}
-
-	fn process(&mut self) {
-		// for _cell in self.line {
-		// 	// TODO: do the processing here
-		// }
 	}
 
 	fn quote_csv_cell(cell: &str) -> String {
@@ -91,16 +92,19 @@ impl CsvLine {
 
 	fn export(&mut self) -> String {
 		self.output.clear();
-		let mut first = true;
+		let mut first_cell;
 
-		for cell in &self.line {
-			if !first {
-				self.output.push(',');
+		for line in &self.lines {
+			first_cell = true;
+			for cell in line {
+				if !first_cell {
+					self.output.push(',');
+				}
+				first_cell = false;
+				self.output.push_str(&Self::quote_csv_cell(cell));
 			}
-			first = false;
-			self.output.push_str(&Self::quote_csv_cell(cell));
+			self.output.push('\n');
 		}
-		self.output.push('\n');
 
 		self.output.clone()
 	}
@@ -109,15 +113,21 @@ impl CsvLine {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::config::Item;
 
 	#[test]
 	fn new_test() {
+		let config = Config {
+			heading: String::from("heading"),
+			lines: Vec::new(),
+		};
+
 		assert_eq!(
-			CsvLine::new(String::from("config")),
+			CsvLine::new(config.clone()),
 			CsvLine {
-				config: String::from("config"),
+				config,
 				cell: String::new(),
-				line: Vec::new(),
+				lines: Vec::new(),
 				output: String::new(),
 			}
 		);
@@ -125,7 +135,10 @@ mod tests {
 
 	#[test]
 	fn parse_line_test() {
-		let mut csv = CsvLine::new(String::from("config"));
+		let mut csv = CsvLine::new(Config {
+			heading: String::from("h1,h2,h3"),
+			lines: vec![vec![Item::Cell(0), Item::Cell(1), Item::Cell(2)]],
+		});
 		assert_eq!(csv.parse_line("1,2,3", false), String::from("1,2,3\n"));
 
 		assert_eq!(
@@ -140,5 +153,33 @@ mod tests {
 		assert_eq!(CsvLine::quote_csv_cell("test,"), String::from("\"test,\""));
 		assert_eq!(CsvLine::quote_csv_cell("test\""), String::from("\"test\"\"\""));
 		assert_eq!(CsvLine::quote_csv_cell("test\ntest"), String::from("\"test\ntest\""));
+	}
+
+	#[test]
+	fn export_test() {
+		assert_eq!(
+			CsvLine {
+				config: Config::default(),
+				cell: String::new(),
+				lines: Vec::new(),
+				output: String::new(),
+			}
+			.export(),
+			String::from(""),
+		);
+
+		assert_eq!(
+			CsvLine {
+				config: Config::default(),
+				cell: String::new(),
+				lines: vec![
+					vec![String::from("A"), String::from("B"), String::from("C")],
+					vec![String::from("D"), String::from("E"), String::from("F")],
+				],
+				output: String::new(),
+			}
+			.export(),
+			String::from("A,B,C\nD,E,F\n"),
+		);
 	}
 }
