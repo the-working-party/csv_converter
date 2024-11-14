@@ -11,8 +11,8 @@ pub struct CsvLine {
 }
 
 impl CsvLine {
-	pub fn read_csv_record<R: BufRead>(
-		reader: &mut R,
+	pub fn read_csv_record(
+		reader: &mut dyn BufRead,
 		line: &mut String,
 		temp_line: &mut String,
 		bytes_read: &mut u128,
