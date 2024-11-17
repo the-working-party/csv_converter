@@ -9,15 +9,15 @@ pub fn run(input_line: &[Vec<String>], output_config: &OutputConfig) -> Vec<Vec<
 		let mut line: Vec<String> = Vec::new();
 		for item in items {
 			match item {
-				Item::Cell(i) => match input_line[0].get(i) {
+				Item::Cell(i, _) => match input_line[0].get(i) {
 					Some(v) => line.push(v.clone()),
 					None => {
-						eprintln!("Process error: Cell not found '{item}'");
+						eprintln!("Process error: Cell not found '{item:?}'");
 						eprintln!("{input_line:?}");
 						exit_with_error(1);
 					},
 				},
-				Item::If(_condition) => {},
+				Item::If(_condition, _) => {},
 				Item::Value(v) => line.push(v.clone()),
 			}
 		}
@@ -38,7 +38,7 @@ mod tests {
 				&vec![vec![String::from("A"), String::from("B"), String::from("C")]],
 				&OutputConfig {
 					heading: String::new(),
-					lines: vec![vec![Item::Cell(0), Item::Cell(2), Item::Cell(1)]],
+					lines: vec![vec![Item::Cell(0, None), Item::Cell(2, None), Item::Cell(1, None)]],
 				},
 			),
 			vec![vec![String::from("A"), String::from("C"), String::from("B")]]
@@ -52,7 +52,11 @@ mod tests {
 				&vec![vec![String::from("A"), String::from("B"), String::from("C")]],
 				&OutputConfig {
 					heading: String::new(),
-					lines: vec![vec![Item::Value(String::from("NEW")), Item::Cell(2), Item::Cell(1)]],
+					lines: vec![vec![
+						Item::Value(String::from("NEW")),
+						Item::Cell(2, None),
+						Item::Cell(1, None)
+					]],
 				},
 			),
 			vec![vec![String::from("NEW"), String::from("C"), String::from("B")]]
@@ -67,8 +71,8 @@ mod tests {
 				&OutputConfig {
 					heading: String::new(),
 					lines: vec![
-						vec![Item::Cell(0), Item::Cell(2), Item::Cell(1)],
-						vec![Item::Cell(0), Item::Cell(1), Item::Cell(2)],
+						vec![Item::Cell(0, None), Item::Cell(2, None), Item::Cell(1, None)],
+						vec![Item::Cell(0, None), Item::Cell(1, None), Item::Cell(2, None)],
 					],
 				},
 			),
@@ -87,9 +91,17 @@ mod tests {
 				&OutputConfig {
 					heading: String::new(),
 					lines: vec![
-						vec![Item::Cell(0), Item::Cell(2), Item::Cell(1)],
-						vec![Item::Cell(2), Item::Value(String::from("MERGE")), Item::Cell(2)],
-						vec![Item::Cell(1), Item::Cell(0), Item::Value(String::from("NEW"))],
+						vec![Item::Cell(0, None), Item::Cell(2, None), Item::Cell(1, None)],
+						vec![
+							Item::Cell(2, None),
+							Item::Value(String::from("MERGE")),
+							Item::Cell(2, None)
+						],
+						vec![
+							Item::Cell(1, None),
+							Item::Cell(0, None),
+							Item::Value(String::from("NEW"))
+						],
 					],
 				},
 			),

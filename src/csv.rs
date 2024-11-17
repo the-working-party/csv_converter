@@ -236,7 +236,7 @@ mod tests {
 	fn parse_line_test() {
 		let mut csv = CsvLine::new(OutputConfig {
 			heading: String::from("h1,h2,h3"),
-			lines: vec![vec![Item::Cell(0), Item::Cell(1), Item::Cell(2)]],
+			lines: vec![vec![Item::Cell(0, None), Item::Cell(1, None), Item::Cell(2, None)]],
 		});
 		assert_eq!(csv.parse_line("1,2,3", false), String::from("1,2,3\n"));
 
