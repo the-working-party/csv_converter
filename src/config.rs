@@ -28,15 +28,15 @@ impl Condition {
 pub enum Filter {
 	UpperCase,
 	LowerCase,
-	Split(String, usize),
-	SubString(u64, Option<u64>),
-	Replace(String, String),
-	Append(String),
-	Prepend(String),
 	Length,
 	Trim,
 	TrimStart,
 	TrimEnd,
+	Replace(String, String),
+	Append(String),
+	Prepend(String),
+	Split(String, usize),
+	SubString(u64, Option<u64>),
 }
 
 impl Filter {
@@ -208,10 +208,14 @@ impl Filter {
 		match self {
 			Self::UpperCase => Cow::Owned(input.to_uppercase()),
 			Self::LowerCase => Cow::Owned(input.to_lowercase()),
-			Self::Split(_needle, _index) => {
+			Self::Length => {
 				unimplemented!()
 			},
-			Self::SubString(_start, _length) => {
+			Self::Trim => Cow::Owned(input.trim().to_string()),
+			Self::TrimStart => {
+				unimplemented!()
+			},
+			Self::TrimEnd => {
 				unimplemented!()
 			},
 			Self::Replace(_search, _replacement) => {
@@ -227,14 +231,10 @@ impl Filter {
 				s.push_str(&input);
 				Cow::Owned(s)
 			},
-			Self::Length => {
+			Self::Split(_needle, _index) => {
 				unimplemented!()
 			},
-			Self::Trim => Cow::Owned(input.trim().to_string()),
-			Self::TrimStart => {
-				unimplemented!()
-			},
-			Self::TrimEnd => {
+			Self::SubString(_start, _length) => {
 				unimplemented!()
 			},
 		}
@@ -474,28 +474,6 @@ mod tests {
 	}
 
 	#[test]
-	fn split_test() {
-		assert_eq!(
-			OutputConfig::new("H1\n<cell1 SPLIT|'-'|6>\n"),
-			OutputConfig {
-				heading: String::from("H1"),
-				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Split(String::from("-"), 6),])),]],
-			}
-		);
-
-		assert_eq!(
-			OutputConfig::new("H1\n<cell1 SPLIT|'###'|666>\n"),
-			OutputConfig {
-				heading: String::from("H1"),
-				lines: vec![vec![Item::Cell(
-					0,
-					Some(vec![Filter::Split(String::from("###"), 666),])
-				),]],
-			}
-		);
-	}
-
-	#[test]
 	fn append_test() {
 		assert_eq!(
 			OutputConfig::new("H1\n<cell1 APPEND|'end'>\n"),
@@ -537,6 +515,28 @@ mod tests {
 
 		assert_eq!(Filter::Prepend(String::from("start-")).run(Cow::Borrowed("middle")), Cow::Borrowed("start-middle"));
 		assert_eq!(Filter::Prepend(String::from("😬 -")).run(Cow::Borrowed("middle")), Cow::Borrowed("😬 -middle"));
+	}
+
+	#[test]
+	fn split_test() {
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 SPLIT|'-'|6>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Split(String::from("-"), 6),])),]],
+			}
+		);
+
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 SPLIT|'###'|666>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(
+					0,
+					Some(vec![Filter::Split(String::from("###"), 666),])
+				),]],
+			}
+		);
 	}
 
 	#[test]
