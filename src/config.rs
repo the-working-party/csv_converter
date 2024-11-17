@@ -38,7 +38,46 @@ pub enum Filter {
 }
 
 impl Filter {
-	pub fn parse<'a>(_filter: &'a str) -> Vec<Self> {
+	pub fn parse<'a>(filter: &'a str) -> Vec<Self> {
+		let mut in_quotes = false;
+		let mut escaped = false;
+		let mut filters = Vec::new();
+		let mut temp_filter = String::new();
+
+		for c in filter.trim().chars() {
+			match c {
+				'\'' => {
+					if !escaped {
+						in_quotes = true;
+					} else {
+						escaped = false;
+					}
+				},
+				'\\' => {
+					if !escaped {
+						escaped = true;
+					} else {
+						escaped = false;
+					}
+				},
+				' ' => {
+					if !in_quotes {
+						filters.push(temp_filter.clone());
+						temp_filter.clear();
+						escaped = false;
+					} else {
+						temp_filter.push(c);
+					}
+				},
+				_ => {
+					escaped = false;
+					temp_filter.push(c);
+				},
+			}
+		}
+		filters.push(temp_filter.clone());
+
+		println!("#######{filters:?}#");
 		vec![Self::Length]
 	}
 }
@@ -156,7 +195,7 @@ mod tests {
 	#[test]
 	fn filter_test() {
 		assert_eq!(
-			OutputConfig::new("H1,H2,H3\n<cell1>,<cell2 UPPER_CASE>,<cell3>\n"),
+			OutputConfig::new("H1,H2,H3\n<cell1>,<cell2 UPPER_CASE LOWER_CASE REPLACE|' '|'-'>,<cell3>\n"),
 			OutputConfig {
 				heading: String::from("H1,H2,H3"),
 				lines: vec![vec![

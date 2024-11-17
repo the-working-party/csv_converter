@@ -132,25 +132,25 @@ In this example we're splitting a single input line into two resulting in double
 
 TODO:
 - [ ] Add `=IF` support for logic support
-  - [ ] Support `=IF <cell1> == "this item"` or `=IF <cell1> == 42` => `Condition::Equals(String)`
-  - [ ] Support `=IF <cell1> != "this item"` or `=IF <cell1> != 42` => `Condition::NotEquals(String)`
+  - [ ] Support `=IF <cell1> == 'this item'` or `=IF <cell1> == 42` => `Condition::Equals(String)`
+  - [ ] Support `=IF <cell1> != 'this item'` or `=IF <cell1> != 42` => `Condition::NotEquals(String)`
   - [ ] Support `=IF <cell1> > 42` => `Condition::GreaterThan(i64)`
   - [ ] Support `=IF <cell1> < 42` => `Condition::LessThan(i64)`
   - [ ] Support `=IF <cell1> % 2 = 0` => `Condition::Modulo(i64, i64)`
-  - [ ] Support `=IF <cell1> STARTS_WITH|"beginning"` => `Condition::StartesWith(String)`
-  - [ ] Support `=IF <cell1> ENDS_WITH|"end"` => `Condition::EndsWith(String)`
-  - [ ] Support `=IF <cell1> CONTAINS|"happieness"` or `=IF <cell1> CONTAINS "happy","sad"` => `Condition::Contains(String)`
+  - [ ] Support `=IF <cell1> STARTS_WITH|'beginning'` => `Condition::StartesWith(String)`
+  - [ ] Support `=IF <cell1> ENDS_WITH|'end'` => `Condition::EndsWith(String)`
+  - [ ] Support `=IF <cell1> CONTAINS|'happieness'` or `=IF <cell1> CONTAINS 'happy','sad'` => `Condition::Contains(String)`
   - [ ] Support `=IF <cell1> IS_EMPTY` => `Condition::IsEmpty`
   - [ ] Support `=IF <cell1> IS_NOT_EMPTY` => `Condition::IsNotEmpty`
   - [ ] Support `=IF <cell1> IS_NUMERIC` => `Condition::IsNumeric`
 - [ ] Add support for string manipulation on `<cell>`
   - [ ] Support `<cell1 UPPER_CASE>` => `FILTER::UpperCase`
   - [ ] Support `<cell1 LOWER_CASE>` => `FILTER::LowerCase`
-  - [ ] Support `<cell1 SPLIT|","|1>` => `FILTER::Split(String)`
+  - [ ] Support `<cell1 SPLIT|','|1>` => `FILTER::Split(String)`
   - [ ] Support `<cell1 SUBSTRING|10,5>` => `FILTER::SubString(u64, Option<u64>)`
-  - [ ] Support `<cell1 REPLACE|" ","-">` => `FILTER::Replace(String)`
-  - [ ] Support `<cell1 APPEND|"pre-">` => `FILTER::Append(String)`
-  - [ ] Support `<cell1 PREPEND|"-end">` => `FILTER::Preppend(String)`
+  - [ ] Support `<cell1 REPLACE|' '|'-'>` => `FILTER::Replace(String)`
+  - [ ] Support `<cell1 APPEND|'pre-'>` => `FILTER::Append(String)`
+  - [ ] Support `<cell1 PREPEND|'-end'>` => `FILTER::Preppend(String)`
   - [ ] Support `<cell1 LENGTH>` => `FILTER::Length`
   - [ ] Support `<cell1 TRIM>` => `FILTER::Trim`
   - [ ] Support `<cell1 TRIM_START>` => `FILTER::TrimStart`
