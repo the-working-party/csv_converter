@@ -24,27 +24,28 @@ impl Condition {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Filter {
-	_UpperCase,
-	_LowerCase,
-	_Split(String),
-	_SubString(u64, Option<u64>),
-	_Replace(String),
-	_Append(String),
-	_Preppend(String),
+	UpperCase,
+	LowerCase,
+	Split(String, usize),
+	SubString(u64, Option<u64>),
+	Replace(String, String),
+	Append(String),
+	Prepend(String),
 	Length,
-	_Trim,
-	_TrimStart,
-	_TrimEnd,
+	Trim,
+	TrimStart,
+	TrimEnd,
 }
 
 impl Filter {
-	pub fn parse<'a>(filter: &'a str) -> Vec<Self> {
+	pub fn parse(filter_str: &str) -> Vec<Self> {
 		let mut in_quotes = false;
 		let mut escaped = false;
-		let mut filters = Vec::new();
+		let mut filters_str = Vec::new();
 		let mut temp_filter = String::new();
+		let mut filters = Vec::new();
 
-		for c in filter.trim().chars() {
+		for c in filter_str.trim().chars() {
 			match c {
 				'\'' => {
 					if !escaped {
@@ -54,15 +55,11 @@ impl Filter {
 					}
 				},
 				'\\' => {
-					if !escaped {
-						escaped = true;
-					} else {
-						escaped = false;
-					}
+					escaped = !escaped;
 				},
 				' ' => {
 					if !in_quotes {
-						filters.push(temp_filter.clone());
+						filters_str.push(temp_filter.clone());
 						temp_filter.clear();
 						escaped = false;
 					} else {
@@ -75,10 +72,134 @@ impl Filter {
 				},
 			}
 		}
-		filters.push(temp_filter.clone());
+		filters_str.push(temp_filter.clone());
 
-		println!("#######{filters:?}#");
-		vec![Self::Length]
+		for filter in filters_str {
+			match filter.as_str() {
+				"UPPER_CASE" => filters.push(Filter::UpperCase),
+				"LOWER_CASE" => filters.push(Filter::LowerCase),
+				"LENGTH" => filters.push(Filter::Length),
+				"TRIM" => filters.push(Filter::Trim),
+				"TRIM_START" => filters.push(Filter::TrimStart),
+				"TRIM_END" => filters.push(Filter::TrimEnd),
+				f if f.starts_with("REPLACE") => {
+					let bits = f.split("|").collect::<Vec<&str>>();
+					if bits.len() != 3 {
+						eprintln!(
+							r#"OutputConfig error: Invalid REPLACE filter "{filter}"\n\
+							Usage: REPLACE|[string]|[string]\n\
+							Example:\n\
+							cell1 = "My csv is great"\n\
+							<cell1 REPLACE|'great'|'awesome'>\n\
+							cell1 = "My csv is awesome""#
+						);
+						exit_with_error(1);
+					}
+					filters.push(Filter::Replace(bits[1].to_string(), bits[2].to_string()));
+				},
+				f if f.starts_with("APPEND") => {
+					let bits = f.split("|").collect::<Vec<&str>>();
+					if bits.len() != 2 {
+						eprintln!(
+							r#"OutputConfig error: Invalid APPEND filter "{filter}"\n\
+							Usage: REPLACE|[string]\n\
+							Example:\n\
+							cell1 = "dark"\n\
+							<cell1 APPEND|'-brown'>\n\
+							cell1 = "dark-brown""#
+						);
+						exit_with_error(1);
+					}
+					filters.push(Filter::Append(bits[1].to_string()));
+				},
+				f if f.starts_with("PREPEND") => {
+					let bits = f.split("|").collect::<Vec<&str>>();
+					if bits.len() != 2 {
+						eprintln!(
+							r#"OutputConfig error: Invalid PREPEND filter "{filter}"\n\
+							Usage: PREPEND|[string]\n\
+							Example:\n\
+							cell1 = "Bond"\n\
+							<cell1 PREPEND|'James '>\n\
+							cell1 = "James Bond""#
+						);
+						exit_with_error(1);
+					}
+					filters.push(Filter::Prepend(bits[1].to_string()));
+				},
+				f if f.starts_with("SPLIT") => {
+					let bits = f.split("|").collect::<Vec<&str>>();
+					if bits.len() != 3 {
+						eprintln!(
+							r#"OutputConfig error: Invalid SPLIT filter "{filter}"\n\
+							Usage: SPLIT|[string]|[number]\n\
+							Example:\n\
+							cell1 = "one,two,three,four"\n\
+							<cell1 SPLIT|','|3>\n\
+							cell1 = "three""#
+						);
+						exit_with_error(1);
+					}
+					let index = match bits[2].parse::<usize>() {
+						Ok(n) => {
+							if n > 0 {
+								n
+							} else {
+								eprintln!(r#"OutputConfig error: The SPLIT index must be positive, was "{}""#, bits[2]);
+								exit_with_error(1);
+							}
+						},
+						Err(_) => {
+							eprintln!(r#"OutputConfig error: Invalid SPLIT index "{}""#, bits[2]);
+							exit_with_error(1);
+						},
+					};
+					filters.push(Filter::Split(bits[1].to_string(), index));
+				},
+				f if f.starts_with("SUB_STRING") => {
+					let bits = f.split("|").collect::<Vec<&str>>();
+					if bits.len() != 2 && bits.len() != 3 {
+						eprintln!(
+							r#"OutputConfig error: Invalid SUB_STRING filter "{filter}"\n\
+							Usage: SUB_STRING|[number]|[number optional]\n\
+							Example:\n\
+							cell1 = "The Working Party"\n\
+							<cell1 SPLIT|4>\n\
+							cell1 = "Working Party"\n\n\
+
+							cell1 = "The Working Party"\n\
+							<cell1 SPLIT|4|7>\n\
+							cell1 = "Working""#
+						);
+						exit_with_error(1);
+					}
+					let start = match bits[1].parse::<u64>() {
+						Ok(n) => n,
+						Err(_) => {
+							eprintln!(r#"OutputConfig error: Invalid SUB_STRING start "{}""#, bits[1]);
+							exit_with_error(1);
+						},
+					};
+					let end = if bits.len() == 3 {
+						match bits[2].parse::<u64>() {
+							Ok(n) => Some(n),
+							Err(_) => {
+								eprintln!(r#"OutputConfig error: Invalid SUB_STRING start "{}""#, bits[2]);
+								exit_with_error(1);
+							},
+						}
+					} else {
+						None
+					};
+					filters.push(Filter::SubString(start, end));
+				},
+				_ => {
+					eprintln!(r#"OutputConfig error: Filter not recognized "{filter}" and will be ignored."#);
+				},
+			}
+		}
+
+		filters
 	}
 }
 
@@ -144,6 +265,7 @@ impl OutputConfig {
 		let mut config_lines = config.lines();
 		let heading;
 		let mut lines = Vec::new();
+		// TODO: fix parsing of config so new lines and commas in filters work
 
 		if let Some(header_line) = config_lines.next() {
 			heading = header_line.to_string();
@@ -195,14 +317,191 @@ mod tests {
 	#[test]
 	fn filter_test() {
 		assert_eq!(
-			OutputConfig::new("H1,H2,H3\n<cell1>,<cell2 UPPER_CASE LOWER_CASE REPLACE|' '|'-'>,<cell3>\n"),
+			OutputConfig::new("H1,H2,H3\n<cell1 LENGTH>,<cell2 UPPER_CASE LOWER_CASE REPLACE|' '|'-'>,<cell3>\n"),
 			OutputConfig {
 				heading: String::from("H1,H2,H3"),
 				lines: vec![vec![
-					Item::Cell(0, None),
-					Item::Cell(1, Some(vec![Filter::Length])),
+					Item::Cell(0, Some(vec![Filter::Length])),
+					Item::Cell(
+						1,
+						Some(vec![
+							Filter::UpperCase,
+							Filter::LowerCase,
+							Filter::Replace(String::from(" "), String::from("-"))
+						])
+					),
 					Item::Cell(2, None),
 				]],
+			}
+		);
+	}
+
+	#[test]
+	fn upper_case_test() {
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 UPPER_CASE>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::UpperCase,])),]],
+			}
+		);
+	}
+
+	#[test]
+	fn lower_case_test() {
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 LOWER_CASE>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::LowerCase,])),]],
+			}
+		);
+	}
+
+	#[test]
+	fn length_test() {
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 LENGTH>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Length,])),]],
+			}
+		);
+	}
+
+	#[test]
+	fn trim_test() {
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 TRIM>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Trim,])),]],
+			}
+		);
+	}
+
+	#[test]
+	fn trim_start_test() {
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 TRIM_START>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::TrimStart,])),]],
+			}
+		);
+	}
+
+	#[test]
+	fn trim_end_test() {
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 TRIM_END>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::TrimEnd,])),]],
+			}
+		);
+	}
+
+	#[test]
+	fn replace_test() {
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 REPLACE|'-'|' '>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(
+					0,
+					Some(vec![Filter::Replace(String::from("-"), String::from(" ")),])
+				),]],
+			}
+		);
+
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 REPLACE|'...'|'##'>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(
+					0,
+					Some(vec![Filter::Replace(String::from("..."), String::from("##")),])
+				),]],
+			}
+		);
+	}
+
+	#[test]
+	fn split_test() {
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 SPLIT|'-'|6>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Split(String::from("-"), 6),])),]],
+			}
+		);
+
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 SPLIT|'###'|666>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(
+					0,
+					Some(vec![Filter::Split(String::from("###"), 666),])
+				),]],
+			}
+		);
+	}
+
+	#[test]
+	fn append_test() {
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 APPEND|'end'>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Append(String::from("end")),])),]],
+			}
+		);
+
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 APPEND|'###'>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Append(String::from("###")),])),]],
+			}
+		);
+	}
+
+	#[test]
+	fn prepend_test() {
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 PREPEND|'front'>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Prepend(String::from("front")),])),]],
+			}
+		);
+
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 PREPEND|'###'>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Prepend(String::from("###")),])),]],
+			}
+		);
+	}
+
+	#[test]
+	fn sub_string_test() {
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 SUB_STRING|5>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::SubString(5, None)])),]],
+			}
+		);
+
+		assert_eq!(
+			OutputConfig::new("H1\n<cell1 SUB_STRING|999|666>\n"),
+			OutputConfig {
+				heading: String::from("H1"),
+				lines: vec![vec![Item::Cell(0, Some(vec![Filter::SubString(999, Some(666))])),]],
 			}
 		);
 	}

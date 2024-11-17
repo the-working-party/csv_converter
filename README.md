@@ -147,7 +147,7 @@ TODO:
   - [ ] Support `<cell1 UPPER_CASE>` => `FILTER::UpperCase`
   - [ ] Support `<cell1 LOWER_CASE>` => `FILTER::LowerCase`
   - [ ] Support `<cell1 SPLIT|','|1>` => `FILTER::Split(String)`
-  - [ ] Support `<cell1 SUBSTRING|10,5>` => `FILTER::SubString(u64, Option<u64>)`
+  - [ ] Support `<cell1 SUB_STRING|10,5>` => `FILTER::SubString(u64, Option<u64>)`
   - [ ] Support `<cell1 REPLACE|' '|'-'>` => `FILTER::Replace(String)`
   - [ ] Support `<cell1 APPEND|'pre-'>` => `FILTER::Append(String)`
   - [ ] Support `<cell1 PREPEND|'-end'>` => `FILTER::Preppend(String)`
