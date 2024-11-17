@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::{
 	cli::exit_with_error,
 	config::{Item, OutputConfig},
@@ -5,19 +7,29 @@ use crate::{
 
 pub fn run(input_line: &[Vec<String>], output_config: &OutputConfig) -> Vec<Vec<String>> {
 	let mut new_lines = Vec::new();
-	for items in output_config.lines.clone() {
+	for items in &output_config.lines {
 		let mut line: Vec<String> = Vec::new();
 		for item in items {
 			match item {
-				Item::Cell(i, _) => match input_line[0].get(i) {
-					Some(v) => line.push(v.clone()),
+				Item::Cell(i, filters) => match input_line[0].get(*i) {
+					Some(v) => {
+						let mut value: Cow<str> = Cow::Borrowed(v.as_str());
+						if let Some(filters) = filters {
+							for filter in filters {
+								value = filter.run(value);
+							}
+						}
+						line.push(value.into_owned())
+					},
 					None => {
-						eprintln!("Process error: Cell not found '{item:?}'");
+						eprintln!("Process error: Cell not found '<cell{i}>'");
 						eprintln!("{input_line:?}");
 						exit_with_error(1);
 					},
 				},
-				Item::If(_condition, _) => {},
+				Item::If(_condition, _else) => {
+					// TODO: execute if condition here
+				},
 				Item::Value(v) => line.push(v.clone()),
 			}
 		}

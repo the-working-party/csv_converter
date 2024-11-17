@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::cli::exit_with_error;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -201,6 +203,42 @@ impl Filter {
 
 		filters
 	}
+
+	pub fn run<'a>(&self, input: Cow<'a, str>) -> Cow<'a, str> {
+		match self {
+			Self::UpperCase => Cow::Owned(input.to_uppercase()),
+			Self::LowerCase => Cow::Owned(input.to_lowercase()),
+			Self::Split(_needle, _index) => {
+				unimplemented!()
+			},
+			Self::SubString(_start, _length) => {
+				unimplemented!()
+			},
+			Self::Replace(_search, _replacement) => {
+				unimplemented!()
+			},
+			Self::Append(suffix) => {
+				let mut s = input.into_owned();
+				s.push_str(suffix);
+				Cow::Owned(s)
+			},
+			Self::Prepend(prefix) => {
+				let mut s = prefix.clone();
+				s.push_str(&input);
+				Cow::Owned(s)
+			},
+			Self::Length => {
+				unimplemented!()
+			},
+			Self::Trim => Cow::Owned(input.trim().to_string()),
+			Self::TrimStart => {
+				unimplemented!()
+			},
+			Self::TrimEnd => {
+				unimplemented!()
+			},
+		}
+	}
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -345,6 +383,10 @@ mod tests {
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::UpperCase,])),]],
 			}
 		);
+
+		assert_eq!(Filter::UpperCase.run(Cow::Borrowed("test")), Cow::Borrowed("TEST"));
+		assert_eq!(Filter::UpperCase.run(Cow::Borrowed("TEST")), Cow::Borrowed("TEST"));
+		assert_eq!(Filter::UpperCase.run(Cow::Borrowed("TeSt 😬")), Cow::Borrowed("TEST 😬"));
 	}
 
 	#[test]
@@ -356,6 +398,10 @@ mod tests {
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::LowerCase,])),]],
 			}
 		);
+
+		assert_eq!(Filter::LowerCase.run(Cow::Borrowed("test")), Cow::Borrowed("test"));
+		assert_eq!(Filter::LowerCase.run(Cow::Borrowed("TEST")), Cow::Borrowed("test"));
+		assert_eq!(Filter::LowerCase.run(Cow::Borrowed("TeSt 😬")), Cow::Borrowed("test 😬"));
 	}
 
 	#[test]
@@ -466,6 +512,9 @@ mod tests {
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Append(String::from("###")),])),]],
 			}
 		);
+
+		assert_eq!(Filter::Append(String::from("-end")).run(Cow::Borrowed("middle")), Cow::Borrowed("middle-end"));
+		assert_eq!(Filter::Append(String::from("- 😬")).run(Cow::Borrowed("middle")), Cow::Borrowed("middle- 😬"));
 	}
 
 	#[test]
@@ -485,6 +534,9 @@ mod tests {
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Prepend(String::from("###")),])),]],
 			}
 		);
+
+		assert_eq!(Filter::Prepend(String::from("start-")).run(Cow::Borrowed("middle")), Cow::Borrowed("start-middle"));
+		assert_eq!(Filter::Prepend(String::from("😬 -")).run(Cow::Borrowed("middle")), Cow::Borrowed("😬 -middle"));
 	}
 
 	#[test]
