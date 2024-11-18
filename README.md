@@ -143,7 +143,7 @@ TODO:
   - [ ] Support `=IF <cell1> IS_EMPTY` => `Condition::IsEmpty`
   - [ ] Support `=IF <cell1> IS_NOT_EMPTY` => `Condition::IsNotEmpty`
   - [ ] Support `=IF <cell1> IS_NUMERIC` => `Condition::IsNumeric`
-- [ ] Add support for string manipulation on `<cell>`
+- [x] Add support for string manipulation on `<cell>`
   - [x] Support `<cell1 UPPER_CASE>` => `FILTER::UpperCase`
   - [x] Support `<cell1 LOWER_CASE>` => `FILTER::LowerCase`
   - [x] Support `<cell1 SPLIT|','|1>` => `FILTER::Split(String)`
