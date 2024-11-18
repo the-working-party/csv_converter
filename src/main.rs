@@ -30,6 +30,14 @@ fn main() {
 		exit_with_error(0);
 	}
 
+	let output_config = match read_to_string(&settings.output_config) {
+		Ok(contents) => OutputConfig::new(&contents),
+		Err(error) => {
+			eprintln!("Error: Could not create output file '{}': {error}", settings.output);
+			exit_with_error(1);
+		},
+	};
+
 	let input_file = match File::open(&settings.input) {
 		Ok(file) => file,
 		Err(error) => {
@@ -54,14 +62,6 @@ fn main() {
 		},
 	};
 	let mut writer = BufWriter::new(output_file);
-
-	let output_config = match read_to_string(&settings.output_config) {
-		Ok(contents) => OutputConfig::new(&contents),
-		Err(error) => {
-			eprintln!("Error: Could not create output file '{}': {error}", settings.output);
-			exit_with_error(1);
-		},
-	};
 
 	let mut line = String::new();
 	let mut temp_line = String::new();

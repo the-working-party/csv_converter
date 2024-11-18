@@ -51,7 +51,7 @@ impl Filter {
 			match c {
 				'\'' => {
 					if !escaped {
-						in_quotes = true;
+						in_quotes = !in_quotes;
 					} else {
 						escaped = false;
 					}
@@ -88,12 +88,12 @@ impl Filter {
 					let bits = f.split("|").collect::<Vec<&str>>();
 					if bits.len() != 3 {
 						eprintln!(
-							r#"OutputConfig error: Invalid REPLACE filter "{filter}"\n\
+							"OutputConfig error: Invalid REPLACE filter \"{filter}\"\n\
 							Usage: REPLACE|[string]|[string]\n\
 							Example:\n\
-							cell1 = "My csv is great"\n\
+							cell1 = \"My csv is great\"\n\
 							<cell1 REPLACE|'great'|'awesome'>\n\
-							cell1 = "My csv is awesome""#
+							cell1 = \"My csv is awesome\""
 						);
 						exit_with_error(1);
 					}
@@ -103,12 +103,12 @@ impl Filter {
 					let bits = f.split("|").collect::<Vec<&str>>();
 					if bits.len() != 2 {
 						eprintln!(
-							r#"OutputConfig error: Invalid APPEND filter "{filter}"\n\
+							"OutputConfig error: Invalid APPEND filter \"{filter}\"\n\
 							Usage: REPLACE|[string]\n\
 							Example:\n\
-							cell1 = "dark"\n\
+							cell1 = \"dark\"\n\
 							<cell1 APPEND|'-brown'>\n\
-							cell1 = "dark-brown""#
+							cell1 = \"dark-brown\""
 						);
 						exit_with_error(1);
 					}
@@ -118,12 +118,12 @@ impl Filter {
 					let bits = f.split("|").collect::<Vec<&str>>();
 					if bits.len() != 2 {
 						eprintln!(
-							r#"OutputConfig error: Invalid PREPEND filter "{filter}"\n\
+							"OutputConfig error: Invalid PREPEND filter \"{filter}\"\n\
 							Usage: PREPEND|[string]\n\
 							Example:\n\
-							cell1 = "Bond"\n\
+							cell1 = \"Bond\"\n\
 							<cell1 PREPEND|'James '>\n\
-							cell1 = "James Bond""#
+							cell1 = \"James Bond\""
 						);
 						exit_with_error(1);
 					}
@@ -133,12 +133,12 @@ impl Filter {
 					let bits = f.split("|").collect::<Vec<&str>>();
 					if bits.len() != 3 {
 						eprintln!(
-							r#"OutputConfig error: Invalid SPLIT filter "{filter}"\n\
+							"OutputConfig error: Invalid SPLIT filter \"{filter}\"\n\
 							Usage: SPLIT|[string]|[number]\n\
 							Example:\n\
-							cell1 = "one,two,three,four"\n\
+							cell1 = \"one,two,three,four\"\n\
 							<cell1 SPLIT|','|3>\n\
-							cell1 = "three""#
+							cell1 = \"two\""
 						);
 						exit_with_error(1);
 					}
@@ -162,16 +162,16 @@ impl Filter {
 					let bits = f.split("|").collect::<Vec<&str>>();
 					if bits.len() != 2 && bits.len() != 3 {
 						eprintln!(
-							r#"OutputConfig error: Invalid SUB_STRING filter "{filter}"\n\
+							"OutputConfig error: Invalid SUB_STRING filter \"{filter}\"\n\
 							Usage: SUB_STRING|[number]|[number optional]\n\
 							Example:\n\
-							cell1 = "The Working Party"\n\
+							cell1 = \"The Working Party\"\n\
 							<cell1 SPLIT|4>\n\
-							cell1 = "Working Party"\n\n\
-
-							cell1 = "The Working Party"\n\
+							cell1 = \"Working Party\"\n\n\
+							\
+							cell1 = \"The Working Party\"\n\
 							<cell1 SPLIT|4|7>\n\
-							cell1 = "Working""#
+							cell1 = \"Working\""
 						);
 						exit_with_error(1);
 					}
