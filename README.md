@@ -146,15 +146,15 @@ TODO:
 - [ ] Add support for string manipulation on `<cell>`
   - [x] Support `<cell1 UPPER_CASE>` => `FILTER::UpperCase`
   - [x] Support `<cell1 LOWER_CASE>` => `FILTER::LowerCase`
-  - [ ] Support `<cell1 SPLIT|','|1>` => `FILTER::Split(String)`
-  - [ ] Support `<cell1 SUB_STRING|10,5>` => `FILTER::SubString(u64, Option<u64>)`
-  - [ ] Support `<cell1 REPLACE|' '|'-'>` => `FILTER::Replace(String)`
+  - [x] Support `<cell1 SPLIT|','|1>` => `FILTER::Split(String)`
+  - [x] Support `<cell1 SUB_STRING|10,5>` => `FILTER::SubString(u64, Option<u64>)`
+  - [x] Support `<cell1 REPLACE|' '|'-'>` => `FILTER::Replace(String)`
   - [x] Support `<cell1 APPEND|'-end'>` => `FILTER::Append(String)`
   - [x] Support `<cell1 PREPEND|'pre-'>` => `FILTER::Prepend(String)`
-  - [ ] Support `<cell1 LENGTH>` => `FILTER::Length`
-  - [ ] Support `<cell1 TRIM>` => `FILTER::Trim`
-  - [ ] Support `<cell1 TRIM_START>` => `FILTER::TrimStart`
-  - [ ] Support `<cell1 TRIM_END>` => `FILTER::TrimEnd`
+  - [x] Support `<cell1 LENGTH>` => `FILTER::Length`
+  - [x] Support `<cell1 TRIM>` => `FILTER::Trim`
+  - [x] Support `<cell1 TRIM_START>` => `FILTER::TrimStart`
+  - [x] Support `<cell1 TRIM_END>` => `FILTER::TrimEnd`
 
 ## Usage
 

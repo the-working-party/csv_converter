@@ -36,7 +36,7 @@ pub enum Filter {
 	Append(String),
 	Prepend(String),
 	Split(String, usize),
-	SubString(u64, Option<u64>),
+	SubString(usize, Option<usize>),
 }
 
 impl Filter {
@@ -175,7 +175,7 @@ impl Filter {
 						);
 						exit_with_error(1);
 					}
-					let start = match bits[1].parse::<u64>() {
+					let start = match bits[1].parse::<usize>() {
 						Ok(n) => n,
 						Err(_) => {
 							eprintln!(r#"OutputConfig error: Invalid SUB_STRING start "{}""#, bits[1]);
@@ -183,7 +183,7 @@ impl Filter {
 						},
 					};
 					let end = if bits.len() == 3 {
-						match bits[2].parse::<u64>() {
+						match bits[2].parse::<usize>() {
 							Ok(n) => Some(n),
 							Err(_) => {
 								eprintln!(r#"OutputConfig error: Invalid SUB_STRING start "{}""#, bits[2]);
@@ -208,19 +208,11 @@ impl Filter {
 		match self {
 			Self::UpperCase => Cow::Owned(input.to_uppercase()),
 			Self::LowerCase => Cow::Owned(input.to_lowercase()),
-			Self::Length => {
-				unimplemented!()
-			},
+			Self::Length => Cow::Owned(input.len().to_string()),
 			Self::Trim => Cow::Owned(input.trim().to_string()),
-			Self::TrimStart => {
-				unimplemented!()
-			},
-			Self::TrimEnd => {
-				unimplemented!()
-			},
-			Self::Replace(_search, _replacement) => {
-				unimplemented!()
-			},
+			Self::TrimStart => Cow::Owned(input.trim_start().to_string()),
+			Self::TrimEnd => Cow::Owned(input.trim_end().to_string()),
+			Self::Replace(search, replacement) => Cow::Owned(input.replace(search, replacement)),
 			Self::Append(suffix) => {
 				let mut s = input.into_owned();
 				s.push_str(suffix);
@@ -231,11 +223,26 @@ impl Filter {
 				s.push_str(&input);
 				Cow::Owned(s)
 			},
-			Self::Split(_needle, _index) => {
-				unimplemented!()
-			},
-			Self::SubString(_start, _length) => {
-				unimplemented!()
+			Self::Split(needle, index) => Cow::Owned(input.split(needle).nth(*index).unwrap_or_default().to_string()),
+			Self::SubString(start, length) => {
+				let start_byte = match input.char_indices().nth(*start) {
+					Some((byte_idx, _)) => byte_idx,
+					None => return Cow::Owned(String::from("")),
+				};
+				let end_byte = match *length {
+					Some(len) => {
+						if len == 0 {
+							return Cow::Owned(String::from(""));
+						} else {
+							match input.char_indices().nth(start + len) {
+								Some((byte_idx, _)) => byte_idx,
+								None => input.len(),
+							}
+						}
+					},
+					None => input.len(),
+				};
+				Cow::Owned(input[start_byte..end_byte].to_string())
 			},
 		}
 	}
@@ -413,6 +420,9 @@ mod tests {
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Length,])),]],
 			}
 		);
+
+		assert_eq!(Filter::Length.run(Cow::Borrowed("test")), Cow::Borrowed("4"));
+		assert_eq!(Filter::Length.run(Cow::Borrowed("123456789 ")), Cow::Borrowed("10"));
 	}
 
 	#[test]
@@ -424,6 +434,9 @@ mod tests {
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Trim,])),]],
 			}
 		);
+
+		assert_eq!(Filter::Trim.run(Cow::Borrowed(" te st  ")), Cow::Borrowed("te st"));
+		assert_eq!(Filter::Trim.run(Cow::Borrowed(" \n te  st  \n  ")), Cow::Borrowed("te  st"));
 	}
 
 	#[test]
@@ -435,6 +448,9 @@ mod tests {
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::TrimStart,])),]],
 			}
 		);
+
+		assert_eq!(Filter::TrimStart.run(Cow::Borrowed(" \n   te  st  ")), Cow::Borrowed("te  st  "));
+		assert_eq!(Filter::TrimStart.run(Cow::Borrowed("  te  st  \n  ")), Cow::Borrowed("te  st  \n  "));
 	}
 
 	#[test]
@@ -446,6 +462,9 @@ mod tests {
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::TrimEnd,])),]],
 			}
 		);
+
+		assert_eq!(Filter::TrimEnd.run(Cow::Borrowed(" \n   te  st  ")), Cow::Borrowed(" \n   te  st"));
+		assert_eq!(Filter::TrimEnd.run(Cow::Borrowed("  te  st  \n  ")), Cow::Borrowed("  te  st"));
 	}
 
 	#[test]
@@ -470,6 +489,15 @@ mod tests {
 					Some(vec![Filter::Replace(String::from("..."), String::from("##")),])
 				),]],
 			}
+		);
+
+		assert_eq!(
+			Filter::Replace(String::from("blue"), String::from("green")).run(Cow::Borrowed("The shirt is blue")),
+			Cow::Borrowed("The shirt is green")
+		);
+		assert_eq!(
+			Filter::Replace(String::from(" "), String::from("")).run(Cow::Borrowed(" The shirt  is blue")),
+			Cow::Borrowed("Theshirtisblue")
 		);
 	}
 
@@ -537,6 +565,10 @@ mod tests {
 				),]],
 			}
 		);
+
+		assert_eq!(Filter::Split(String::from("-"), 3).run(Cow::Borrowed("0-1-2-3-4-5")), Cow::Borrowed("3"));
+		assert_eq!(Filter::Split(String::from("-"), 10).run(Cow::Borrowed("0-1-2-3-4-5")), Cow::Borrowed(""));
+		assert_eq!(Filter::Split(String::from("-"), 10).run(Cow::Borrowed("no dashes")), Cow::Borrowed(""));
 	}
 
 	#[test]
@@ -556,5 +588,8 @@ mod tests {
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::SubString(999, Some(666))])),]],
 			}
 		);
+
+		assert_eq!(Filter::SubString(5, None).run(Cow::Borrowed("12345678910 end")), Cow::Borrowed("678910 end"));
+		assert_eq!(Filter::SubString(5, Some(3)).run(Cow::Borrowed("12345678910 end")), Cow::Borrowed("678"));
 	}
 }
