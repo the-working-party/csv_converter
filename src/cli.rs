@@ -17,7 +17,7 @@ impl Settings {
 				"-i" | "--input" => {
 					let item = args_iter.next();
 					if item.is_none() {
-						eprintln!("Error: Expected an argument after '{arg}'");
+						eprintln!(r#"Error: Expected an argument after "{arg}""#);
 						exit_with_error(1);
 					} else {
 						settings.input = item.unwrap();
@@ -26,7 +26,7 @@ impl Settings {
 				"-o" | "--output" => {
 					let item = args_iter.next();
 					if item.is_none() {
-						eprintln!("Error: Expected an argument after '{arg}'");
+						eprintln!(r#"Error: Expected an argument after "{arg}""#);
 						exit_with_error(1);
 					} else {
 						settings.output = item.unwrap();
@@ -35,7 +35,7 @@ impl Settings {
 				"-c" | "--config" => {
 					let item = args_iter.next();
 					if item.is_none() {
-						eprintln!("Error: Expected an argument after '{arg}'");
+						eprintln!(r#"Error: Expected an argument after "{arg}""#);
 						exit_with_error(1);
 					} else {
 						settings.output_config = item.unwrap();

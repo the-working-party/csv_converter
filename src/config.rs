@@ -1,26 +1,48 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, io::BufRead};
 
-use crate::cli::exit_with_error;
+use crate::{
+	cli::exit_with_error,
+	csv::{self, CsvParser},
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Condition {
-	_Equals(String),
-	_NotEquals(String),
-	_GreaterThan(i64),
-	_LessThan(i64),
-	_Modulo(i64, i64),
-	_StartesWith(String),
-	_EndsWith(String),
-	_Contains(String),
-	IsEmpty,
-	_IsNotEmpty,
-	_IsNumeric,
+	_Equals(String, Box<Item>),
+	_NotEquals(String, Box<Item>),
+	_GreaterThan(i64, Box<Item>),
+	_LessThan(i64, Box<Item>),
+	_Modulo(i64, i64, Box<Item>),
+	_StartesWith(String, Box<Item>),
+	_EndsWith(String, Box<Item>),
+	_Contains(String, Box<Item>),
+	IsEmpty(Box<Item>),
+	_IsNotEmpty(Box<Item>),
+	_IsNumeric(Box<Item>),
 	// TODO: date functions
 }
 
 impl Condition {
-	pub fn parse(_condition: String) -> Self {
-		Self::IsEmpty
+	pub fn parse(_condition_str: &str) -> (Self, Option<Box<Item>>) {
+		// "<celle1 REPLACE|' '|'-' SUB_STRING|10|5> [condition] <cell2> ELSE <cell3>"
+		// == 'this item'
+		// != 'this item'
+		// > 42
+		// < 42
+		// % 2 = 0
+		// STARTS_WITH|'beginning'
+		// IS_EMPTY
+
+		// let condition;
+		// let else_item;
+		// let in_cell;
+		// let in_quote;
+		// let escaped;
+
+		// for c in condition_str.trim().chars() {
+		// 	let if_item;
+		// }
+
+		(Self::IsEmpty(Box::new(Item::Value(String::from("")))), None)
 	}
 }
 
@@ -53,6 +75,7 @@ impl Filter {
 					if !escaped {
 						in_quotes = !in_quotes;
 					} else {
+						temp_filter.push(c);
 						escaped = false;
 					}
 				},
@@ -143,14 +166,7 @@ impl Filter {
 						exit_with_error(1);
 					}
 					let index = match bits[2].parse::<usize>() {
-						Ok(n) => {
-							if n > 0 {
-								n
-							} else {
-								eprintln!(r#"OutputConfig error: The SPLIT index must be positive, was "{}""#, bits[2]);
-								exit_with_error(1);
-							}
-						},
+						Ok(n) => n,
 						Err(_) => {
 							eprintln!(r#"OutputConfig error: Invalid SPLIT index "{}""#, bits[2]);
 							exit_with_error(1);
@@ -273,26 +289,18 @@ impl Item {
 					if n > 0 {
 						Item::Cell(n - 1, filter)
 					} else {
-						eprintln!("OutputConfig error: Cell number must be positive for item '{input}'");
+						eprintln!(r#"OutputConfig error: Cell number must be positive for item "{input}""#);
 						exit_with_error(1);
 					}
 				},
 				Err(_) => {
-					eprintln!("OutputConfig error: Invalid cell number '{input}'");
+					eprintln!(r#"OutputConfig error: Invalid cell number "{input}""#);
 					exit_with_error(1);
 				},
 			}
-		} else if input.starts_with("=IF ") {
-			let trimmed = input.trim_start_matches("=IF ").trim();
-			let parts = trimmed.splitn(2, "ELSE").map(str::trim).collect::<Vec<&str>>();
-			if parts.is_empty() || parts[0].is_empty() {
-				eprintln!("OutputConfig error: Invalid if condition '{input}'");
-				exit_with_error(1);
-			}
-			let condition = parts[0].to_string();
-			let else_condition = parts.get(1).map(|&else_condition| Box::new(Item::parse(else_condition.to_string())));
-
-			Item::If(Condition::parse(condition), else_condition)
+		} else if let Some(condition) = input.strip_prefix(":IF ") {
+			let (condition, else_condition) = Condition::parse(condition);
+			Item::If(condition, else_condition)
 		} else {
 			Item::Value(input.to_string())
 		}
@@ -306,25 +314,24 @@ pub struct OutputConfig {
 }
 
 impl OutputConfig {
-	pub fn new(config: &str) -> Self {
-		let mut config_lines = config.lines();
-		let heading;
+	pub fn new<R: BufRead>(config_file: CsvParser<R>) -> Self {
+		let mut heading = String::new();
+		let mut is_heading = true;
 		let mut lines = Vec::new();
-		// TODO: fix parsing of config so new lines and commas in filters work
 
-		if let Some(header_line) = config_lines.next() {
-			heading = header_line.to_string();
-		} else {
-			eprintln!("OutputConfig error: No content found");
-			exit_with_error(1);
-		}
-
-		for line in config_lines {
-			let mut cells = Vec::new();
-			for cell in line.split(",") {
-				cells.push(Item::parse(cell.to_string()));
+		for row in config_file {
+			if is_heading {
+				csv::export(&[row], &mut heading);
+				heading.drain(..heading.len().saturating_sub(heading.trim_start().len()));
+				heading.truncate(heading.trim_end().len());
+				is_heading = false;
+			} else {
+				let mut cells = Vec::new();
+				for cell in row {
+					cells.push(Item::parse(cell.to_string()));
+				}
+				lines.push(cells);
 			}
-			lines.push(cells);
 		}
 
 		Self { heading, lines }
@@ -334,11 +341,12 @@ impl OutputConfig {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use std::io::Cursor;
 
 	#[test]
 	fn new_test() {
 		assert_eq!(
-			OutputConfig::new("heading1,heading2,heading3\n<cell1>,<cell2>,<cell3>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("heading1,heading2,heading3\n<cell1>,<cell2>,<cell3>\n"))),
 			OutputConfig {
 				heading: String::from("heading1,heading2,heading3"),
 				lines: vec![vec![Item::Cell(0, None), Item::Cell(1, None), Item::Cell(2, None),]],
@@ -346,14 +354,14 @@ mod tests {
 		);
 
 		assert_eq!(
-			OutputConfig::new("h1,h2,h3,h4\n<cell1>,,hardcoded,=IF my condition\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("h1,h2,h3,h4\n<cell1>,,hardcoded,:IF my condition\n"))),
 			OutputConfig {
 				heading: String::from("h1,h2,h3,h4"),
 				lines: vec![vec![
 					Item::Cell(0, None),
 					Item::Value(String::from("")),
 					Item::Value(String::from("hardcoded")),
-					Item::If(Condition::IsEmpty, None),
+					Item::If(Condition::IsEmpty(Box::new(Item::Value(String::from("")))), None),
 				]],
 			}
 		);
@@ -362,7 +370,9 @@ mod tests {
 	#[test]
 	fn filter_test() {
 		assert_eq!(
-			OutputConfig::new("H1,H2,H3\n<cell1 LENGTH>,<cell2 UPPER_CASE LOWER_CASE REPLACE|' '|'-'>,<cell3>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new(
+				"H1,H2,H3\n<cell1 LENGTH>,<cell2 UPPER_CASE LOWER_CASE REPLACE|' '|'-' SPLIT|'-'|3 APPEND|'end'>,<cell3>\n"
+			))),
 			OutputConfig {
 				heading: String::from("H1,H2,H3"),
 				lines: vec![vec![
@@ -372,7 +382,9 @@ mod tests {
 						Some(vec![
 							Filter::UpperCase,
 							Filter::LowerCase,
-							Filter::Replace(String::from(" "), String::from("-"))
+							Filter::Replace(String::from(" "), String::from("-")),
+							Filter::Split(String::from("-"), 3),
+							Filter::Append(String::from("end")),
 						])
 					),
 					Item::Cell(2, None),
@@ -384,7 +396,7 @@ mod tests {
 	#[test]
 	fn upper_case_test() {
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 UPPER_CASE>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 UPPER_CASE>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::UpperCase,])),]],
@@ -399,7 +411,7 @@ mod tests {
 	#[test]
 	fn lower_case_test() {
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 LOWER_CASE>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 LOWER_CASE>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::LowerCase,])),]],
@@ -414,7 +426,7 @@ mod tests {
 	#[test]
 	fn length_test() {
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 LENGTH>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 LENGTH>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Length,])),]],
@@ -428,7 +440,7 @@ mod tests {
 	#[test]
 	fn trim_test() {
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 TRIM>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 TRIM>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Trim,])),]],
@@ -442,7 +454,7 @@ mod tests {
 	#[test]
 	fn trim_start_test() {
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 TRIM_START>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 TRIM_START>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::TrimStart,])),]],
@@ -456,7 +468,7 @@ mod tests {
 	#[test]
 	fn trim_end_test() {
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 TRIM_END>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 TRIM_END>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::TrimEnd,])),]],
@@ -470,7 +482,7 @@ mod tests {
 	#[test]
 	fn replace_test() {
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 REPLACE|'-'|' '>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 REPLACE|'-'|' '>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(
@@ -481,7 +493,7 @@ mod tests {
 		);
 
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 REPLACE|'...'|'##'>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 REPLACE|'...'|'##'>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(
@@ -504,7 +516,7 @@ mod tests {
 	#[test]
 	fn append_test() {
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 APPEND|'end'>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 APPEND|'end'>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Append(String::from("end")),])),]],
@@ -512,7 +524,7 @@ mod tests {
 		);
 
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 APPEND|'###'>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 APPEND|'###'>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Append(String::from("###")),])),]],
@@ -526,7 +538,7 @@ mod tests {
 	#[test]
 	fn prepend_test() {
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 PREPEND|'front'>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 PREPEND|'front'>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Prepend(String::from("front")),])),]],
@@ -534,7 +546,7 @@ mod tests {
 		);
 
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 PREPEND|'###'>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 PREPEND|'###'>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Prepend(String::from("###")),])),]],
@@ -548,7 +560,7 @@ mod tests {
 	#[test]
 	fn split_test() {
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 SPLIT|'-'|6>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 SPLIT|'-'|6>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::Split(String::from("-"), 6),])),]],
@@ -556,7 +568,7 @@ mod tests {
 		);
 
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 SPLIT|'###'|666>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 SPLIT|'###'|666>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(
@@ -574,7 +586,7 @@ mod tests {
 	#[test]
 	fn sub_string_test() {
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 SUB_STRING|5>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 SUB_STRING|5>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::SubString(5, None)])),]],
@@ -582,7 +594,7 @@ mod tests {
 		);
 
 		assert_eq!(
-			OutputConfig::new("H1\n<cell1 SUB_STRING|999|666>\n"),
+			OutputConfig::new(CsvParser::new(Cursor::new("H1\n<cell1 SUB_STRING|999|666>\n"))),
 			OutputConfig {
 				heading: String::from("H1"),
 				lines: vec![vec![Item::Cell(0, Some(vec![Filter::SubString(999, Some(666))])),]],
@@ -591,5 +603,70 @@ mod tests {
 
 		assert_eq!(Filter::SubString(5, None).run(Cow::Borrowed("12345678910 end")), Cow::Borrowed("678910 end"));
 		assert_eq!(Filter::SubString(5, Some(3)).run(Cow::Borrowed("12345678910 end")), Cow::Borrowed("678"));
+	}
+
+	#[test]
+	fn item_parse_test() {
+		assert_eq!(Item::parse(String::from("TEST")), Item::Value(String::from("TEST")));
+		assert_eq!(Item::parse(String::from("<cell1>")), Item::Cell(0, None));
+		assert_eq!(Item::parse(String::from("<cell999>")), Item::Cell(998, None));
+		assert_eq!(Item::parse(String::from("<cell1 UPPER_CASE>")), Item::Cell(0, Some(vec![Filter::UpperCase])));
+		assert_eq!(
+			Item::parse(String::from("<cell1 REPLACE|'\"'|'\\'' LOWER_CASE>")),
+			Item::Cell(
+				0,
+				Some(vec![
+					Filter::Replace(String::from("\""), String::from("'")),
+					Filter::LowerCase
+				])
+			)
+		);
+	}
+
+	#[test]
+	fn filter_parsing_test() {
+		assert_eq!(Filter::parse("UPPER_CASE"), vec![Filter::UpperCase]);
+		assert_eq!(Filter::parse("LOWER_CASE"), vec![Filter::LowerCase]);
+		assert_eq!(Filter::parse("LENGTH"), vec![Filter::Length]);
+		assert_eq!(Filter::parse("TRIM"), vec![Filter::Trim]);
+		assert_eq!(Filter::parse("TRIM_START"), vec![Filter::TrimStart]);
+		assert_eq!(Filter::parse("TRIM_END"), vec![Filter::TrimEnd]);
+		assert_eq!(Filter::parse("REPLACE|' '|''"), vec![Filter::Replace(String::from(" "), String::from(""))]);
+		assert_eq!(Filter::parse("APPEND|'x'"), vec![Filter::Append(String::from("x"))]);
+		assert_eq!(Filter::parse("PREPEND|'x'"), vec![Filter::Prepend(String::from("x"))]);
+		assert_eq!(Filter::parse("SPLIT|'x'|3"), vec![Filter::Split(String::from("x"), 3)]);
+		assert_eq!(Filter::parse("SUB_STRING|5"), vec![Filter::SubString(5, None)]);
+		assert_eq!(Filter::parse("SUB_STRING|5|10"), vec![Filter::SubString(5, Some(10))]);
+
+		assert_eq!(
+			Filter::parse("REPLACE|'\"'|'\\'' LOWER_CASE"),
+			vec![
+				Filter::Replace(String::from("\""), String::from("'")),
+				Filter::LowerCase
+			]
+		);
+
+		assert_eq!(
+			Filter::parse("UPPER_CASE LOWER_CASE LENGTH TRIM TRIM_START TRIM_END REPLACE|'blue'|'green' APPEND|'x' PREPEND|'x' SPLIT|' '|666 SUB_STRING|5 SUB_STRING|5|10"),
+			vec![
+				Filter::UpperCase,
+				Filter::LowerCase,
+				Filter::Length,
+				Filter::Trim,
+				Filter::TrimStart,
+				Filter::TrimEnd,
+				Filter::Replace(String::from("blue"), String::from("green")),
+				Filter::Append(String::from("x")),
+				Filter::Prepend(String::from("x")),
+				Filter::Split(String::from(" "), 666),
+				Filter::SubString(5, None),
+				Filter::SubString(5, Some(10))
+			]
+		);
+	}
+
+	#[test]
+	fn condition_parse_test() {
+		// assert_eq!();
 	}
 }

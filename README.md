@@ -131,24 +131,24 @@ In this example we're splitting a single input line into two resulting in double
 
 
 TODO:
-- [ ] Add `=IF <celle1> [condition] '' ELSE ''` and `=IF <celle1> [condition] <cell2> ELSE <cell3>`
-  - [ ] Support `=IF <cell1> == 'this item'` => `Condition::Equals(String)`
-  - [ ] Support `=IF <cell1> != 'this item'` => `Condition::NotEquals(String)`
-  - [ ] Support `=IF <cell1> > 42` => `Condition::GreaterThan(i64)`
-  - [ ] Support `=IF <cell1> < 42` => `Condition::LessThan(i64)`
-  - [ ] Support `=IF <cell1> % 2 = 0` => `Condition::Modulo(i64, i64)`
-  - [ ] Support `=IF <cell1> STARTS_WITH|'beginning'` => `Condition::StartesWith(String)`
-  - [ ] Support `=IF <cell1> ENDS_WITH|'end'` => `Condition::EndsWith(String)`
-  - [ ] Support `=IF <cell1> CONTAINS|'happieness'` or `=IF <cell1> CONTAINS 'happy','sad'` => `Condition::Contains(String)`
-  - [ ] Support `=IF <cell1> IS_EMPTY` => `Condition::IsEmpty`
-  - [ ] Support `=IF <cell1> IS_NOT_EMPTY` => `Condition::IsNotEmpty`
-  - [ ] Support `=IF <cell1> IS_NUMERIC` => `Condition::IsNumeric`
+- [ ] Add `:IF <celle1> [condition] '' ELSE ''` and `:IF <celle1> [condition] <cell2> ELSE <cell3>`
+  - [ ] Support `:IF <cell1> == 'this item'` => `Condition::Equals(String, Box<Item>)`
+  - [ ] Support `:IF <cell1> != 'this item'` => `Condition::NotEquals(String, Box<Item>)`
+  - [ ] Support `:IF <cell1> > 42` => `Condition::GreaterThan(i64, Box<Item>)`
+  - [ ] Support `:IF <cell1> < 42` => `Condition::LessThan(i64, Box<Item>)`
+  - [ ] Support `:IF <cell1> % 2 = 0` => `Condition::Modulo(i64, i64, Box<Item>)`
+  - [ ] Support `:IF <cell1> STARTS_WITH|'beginning'` => `Condition::StartesWith(String, Box<Item>)`
+  - [ ] Support `:IF <cell1> ENDS_WITH|'end'` => `Condition::EndsWith(String, Box<Item>)`
+  - [ ] Support `:IF <cell1> CONTAINS|'happieness'` or `:IF <cell1> CONTAINS 'happy','sad'` => `Condition::Contains(String, Box<Item>)`
+  - [ ] Support `:IF <cell1> IS_EMPTY` => `Condition::IsEmpty(Box<Item>)`
+  - [ ] Support `:IF <cell1> IS_NOT_EMPTY` => `Condition::IsNotEmpty(Box<Item>)`
+  - [ ] Support `:IF <cell1> IS_NUMERIC` => `Condition::IsNumeric(Box<Item>)`
   - [ ] Support `ELSE`
 - [x] Add support for string manipulation on `<cell>`
   - [x] Support `<cell1 UPPER_CASE>` => `FILTER::UpperCase`
   - [x] Support `<cell1 LOWER_CASE>` => `FILTER::LowerCase`
   - [x] Support `<cell1 SPLIT|','|1>` => `FILTER::Split(String)`
-  - [x] Support `<cell1 SUB_STRING|10,5>` => `FILTER::SubString(u64, Option<u64>)`
+  - [x] Support `<cell1 SUB_STRING|10|5>` => `FILTER::SubString(u64, Option<u64>)`
   - [x] Support `<cell1 REPLACE|' '|'-'>` => `FILTER::Replace(String)`
   - [x] Support `<cell1 APPEND|'-end'>` => `FILTER::Append(String)`
   - [x] Support `<cell1 PREPEND|'pre-'>` => `FILTER::Prepend(String)`
