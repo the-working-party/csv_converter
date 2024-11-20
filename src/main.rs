@@ -79,7 +79,7 @@ fn main() {
 			is_heading = false;
 			output = format!("{}\n", output_config.heading);
 		} else {
-			csv::export(&process::run(&[row], &output_config), &mut output);
+			csv::export(&process::run(&row, &output_config), &mut output);
 		};
 
 		if let Err(error) = writer.write_all(output.as_bytes()) {

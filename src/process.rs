@@ -5,13 +5,13 @@ use crate::{
 	config::{Item, OutputConfig},
 };
 
-pub fn run(input_line: &[Vec<String>], output_config: &OutputConfig) -> Vec<Vec<String>> {
+pub fn run(input_line: &Vec<String>, output_config: &OutputConfig) -> Vec<Vec<String>> {
 	let mut new_lines = Vec::new();
 	for items in &output_config.lines {
 		let mut line: Vec<String> = Vec::new();
 		for item in items {
 			match item {
-				Item::Cell(i, filters) => match input_line[0].get(*i) {
+				Item::Cell(i, filters) => match input_line.get(*i) {
 					Some(v) => {
 						let mut value: Cow<str> = Cow::Borrowed(v.as_str());
 						if let Some(filters) = filters {
@@ -19,7 +19,7 @@ pub fn run(input_line: &[Vec<String>], output_config: &OutputConfig) -> Vec<Vec<
 								value = filter.run(value);
 							}
 						}
-						line.push(value.into_owned())
+						line.push(value.to_string())
 					},
 					None => {
 						eprintln!("Process error: Cell not found '<cell{i}>'");
@@ -27,8 +27,8 @@ pub fn run(input_line: &[Vec<String>], output_config: &OutputConfig) -> Vec<Vec<
 						exit_with_error(1);
 					},
 				},
-				Item::If(_condition, _then_item, _else_item) => {
-					// TODO: execute if condition here
+				Item::If(condition, then_item, else_item) => {
+					line.push(condition.run(then_item, &else_item.as_ref().map(|b| (**b).clone()), input_line).to_string())
 				},
 				Item::Value(v) => line.push(v.clone()),
 			}
@@ -42,16 +42,15 @@ pub fn run(input_line: &[Vec<String>], output_config: &OutputConfig) -> Vec<Vec<
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::csv::CsvParser;
+	use std::io::Cursor;
 
 	#[test]
 	fn run_cell_test() {
 		assert_eq!(
 			run(
-				&vec![vec![String::from("A"), String::from("B"), String::from("C")]],
-				&OutputConfig {
-					heading: String::new(),
-					lines: vec![vec![Item::Cell(0, None), Item::Cell(2, None), Item::Cell(1, None)]],
-				},
+				&vec![String::from("A"), String::from("B"), String::from("C")],
+				&OutputConfig::new(CsvParser::new(Cursor::new("A,B,C\n<cell1>,<cell3>,<cell2>\n"))),
 			),
 			vec![vec![String::from("A"), String::from("C"), String::from("B")]]
 		);
@@ -61,7 +60,7 @@ mod tests {
 	fn run_value_test() {
 		assert_eq!(
 			run(
-				&vec![vec![String::from("A"), String::from("B"), String::from("C")]],
+				&vec![String::from("A"), String::from("B"), String::from("C")],
 				&OutputConfig {
 					heading: String::new(),
 					lines: vec![vec![
@@ -79,7 +78,7 @@ mod tests {
 	fn run_multiple_lines_test() {
 		assert_eq!(
 			run(
-				&vec![vec![String::from("A"), String::from("B"), String::from("C")]],
+				&vec![String::from("A"), String::from("B"), String::from("C")],
 				&OutputConfig {
 					heading: String::new(),
 					lines: vec![
@@ -99,7 +98,7 @@ mod tests {
 	fn run_everything_test() {
 		assert_eq!(
 			run(
-				&vec![vec![String::from("A"), String::from("B"), String::from("C")]],
+				&vec![String::from("A"), String::from("B"), String::from("C")],
 				&OutputConfig {
 					heading: String::new(),
 					lines: vec![

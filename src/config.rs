@@ -22,7 +22,7 @@ pub enum Condition {
 }
 
 impl Condition {
-	pub fn parse(condition_str: &str) -> (Self, Box<Item>, Option<Box<Item>>) {
+	pub fn parse(condition_str: &str) -> Item {
 		let usage = "\n\
 		The syntax of an IF condition is: :IF <cell[x]> [condition] ([then-item]) [ELSE ([else-item])]\n\
 		Examples:\n\
@@ -212,11 +212,60 @@ impl Condition {
 			},
 		};
 
-		(condition, Box::new(then_item.unwrap()), else_item)
+		Item::If(condition, Box::new(then_item.unwrap()), else_item)
 	}
 
-	// TODO: create run function
-	// pub fn run() {}
+	fn get_val_from_item<'a>(item: &Item, input_line: &Vec<String>) -> Cow<'a, str> {
+		match item.clone() {
+			Item::Value(v) => Cow::Owned(v),
+			Item::Cell(i, filters) => match input_line.get(i) {
+				Some(v) => {
+					let mut value: Cow<str> = Cow::Borrowed(v.as_str());
+					if let Some(filters) = filters {
+						for filter in filters {
+							value = filter.run(value);
+						}
+					}
+					Cow::Owned(value.to_string())
+				},
+				None => {
+					eprintln!("Process error: Cell not found '<cell{i}>'");
+					eprintln!("{input_line:?}");
+					exit_with_error(1);
+				},
+			},
+			Item::If(_, _, _) => {
+				eprintln!("Condition error: Condition cannot contain a nested IF clause");
+				exit_with_error(1);
+			},
+		}
+	}
+
+	pub fn run<'a>(&self, then_item: &Item, else_item: &Option<Item>, input_line: &Vec<String>) -> Cow<'a, str> {
+		match self {
+			Self::IsEmpty(cell) => {
+				let value = Self::get_val_from_item(cell, input_line);
+
+				if value.is_empty() {
+					Self::get_val_from_item(then_item, input_line)
+				} else if else_item.is_none() {
+					Cow::Owned(String::from(""))
+				} else {
+					Self::get_val_from_item(else_item.as_ref().unwrap(), input_line)
+				}
+			},
+			Self::IsNotEmpty(_cell) => Cow::Owned(String::from("")),
+			Self::IsNumeric(_cell) => Cow::Owned(String::from("")),
+			Self::StartesWith(_needle, _cell) => Cow::Owned(String::from("")),
+			Self::EndsWith(_needle, _cell) => Cow::Owned(String::from("")),
+			Self::Contains(_needle, _cell) => Cow::Owned(String::from("")),
+			Self::Equals(_cell_a, _cell_b) => Cow::Owned(String::from("")),
+			Self::NotEquals(_cell_a, _cell_b) => Cow::Owned(String::from("")),
+			Self::GreaterThan(_cell_a, _cell_b) => Cow::Owned(String::from("")),
+			Self::LessThan(_cell_a, _cell_b) => Cow::Owned(String::from("")),
+			Self::Modulo(_divisor, _remainder, _cell) => Cow::Owned(String::from("")),
+		}
+	}
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -472,8 +521,7 @@ impl Item {
 				},
 			}
 		} else if let Some(condition) = input.strip_prefix(":IF ") {
-			let (condition, then_item, else_item) = Condition::parse(condition);
-			Item::If(condition, then_item, else_item)
+			Condition::parse(condition)
 		} else {
 			Item::Value(input.to_string())
 		}
@@ -842,7 +890,7 @@ mod tests {
 	fn conditional_isempty_test() {
 		assert_eq!(
 			Condition::parse("<cell1> IS_EMPTY ('yay') ELSE (<cell2>)"),
-			(
+			Item::If(
 				Condition::IsEmpty(Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("yay"))),
 				Some(Box::new(Item::Cell(1, None)))
@@ -851,15 +899,37 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1> IS_EMPTY (<cell2>)"),
-			(Condition::IsEmpty(Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(Condition::IsEmpty(Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
 		);
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> IS_EMPTY (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> IS_EMPTY (<cell2>) ELSE (<cell3>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("C")
+			);
+		}
 	}
 
 	#[test]
 	fn conditional_isnotempty_test() {
 		assert_eq!(
 			Condition::parse("<cell1> IS_NOT_EMPTY ('yay') ELSE (<cell2>)"),
-			(
+			Item::If(
 				Condition::IsNotEmpty(Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("yay"))),
 				Some(Box::new(Item::Cell(1, None)))
@@ -868,7 +938,7 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1> IS_NOT_EMPTY (<cell2>)"),
-			(Condition::IsNotEmpty(Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(Condition::IsNotEmpty(Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
 		);
 	}
 
@@ -876,7 +946,7 @@ mod tests {
 	fn conditional_isnumeric_test() {
 		assert_eq!(
 			Condition::parse("<cell1> IS_NUMERIC ('yay') ELSE (<cell2>)"),
-			(
+			Item::If(
 				Condition::IsNumeric(Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("yay"))),
 				Some(Box::new(Item::Cell(1, None)))
@@ -885,7 +955,7 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1> IS_NUMERIC (<cell2>)"),
-			(Condition::IsNumeric(Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(Condition::IsNumeric(Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
 		);
 	}
 
@@ -893,7 +963,7 @@ mod tests {
 	fn conditional_starteswith_test() {
 		assert_eq!(
 			Condition::parse("<cell1> STARTS_WITH|'foo' ('ya\\'y') ELSE (<cell2>)"),
-			(
+			Item::If(
 				Condition::StartesWith(String::from("foo"), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("ya'y"))),
 				Some(Box::new(Item::Cell(1, None)))
@@ -902,12 +972,16 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1> STARTS_WITH|'foo' (<cell2>)"),
-			(Condition::StartesWith(String::from("foo"), Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(
+				Condition::StartesWith(String::from("foo"), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
 		);
 
 		assert_eq!(
 			Condition::parse("<cell1> STARTS_WITH|'fo\\'o' (<cell2>)"),
-			(
+			Item::If(
 				Condition::StartesWith(String::from("fo'o"), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Cell(1, None)),
 				None
@@ -919,7 +993,7 @@ mod tests {
 	fn conditional_endswith_test() {
 		assert_eq!(
 			Condition::parse("<cell1> ENDS_WITH|'foo' ('ya\\'y') ELSE (<cell2>)"),
-			(
+			Item::If(
 				Condition::EndsWith(String::from("foo"), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("ya'y"))),
 				Some(Box::new(Item::Cell(1, None)))
@@ -928,12 +1002,20 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1> ENDS_WITH|'foo' (<cell2>)"),
-			(Condition::EndsWith(String::from("foo"), Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(
+				Condition::EndsWith(String::from("foo"), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
 		);
 
 		assert_eq!(
 			Condition::parse("<cell1> ENDS_WITH|'fo\\'o' (<cell2>)"),
-			(Condition::EndsWith(String::from("fo'o"), Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(
+				Condition::EndsWith(String::from("fo'o"), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
 		);
 	}
 
@@ -941,7 +1023,7 @@ mod tests {
 	fn conditional_contains_test() {
 		assert_eq!(
 			Condition::parse("<cell1> CONTAINS|'foo' ('yay') ELSE (<cell2>)"),
-			(
+			Item::If(
 				Condition::Contains(String::from("foo"), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("yay"))),
 				Some(Box::new(Item::Cell(1, None)))
@@ -950,7 +1032,11 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1> CONTAINS|'foo' (<cell2>)"),
-			(Condition::Contains(String::from("foo"), Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(
+				Condition::Contains(String::from("foo"), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
 		);
 	}
 
@@ -958,7 +1044,7 @@ mod tests {
 	fn conditional_equals_test() {
 		assert_eq!(
 			Condition::parse("<cell1> == 'foo' ('yay') ELSE (<cell2>)"),
-			(
+			Item::If(
 				Condition::Equals(Box::new(Item::Value(String::from("foo"))), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("yay"))),
 				Some(Box::new(Item::Cell(1, None)))
@@ -967,7 +1053,7 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1> == 'foo' (<cell2>)"),
-			(
+			Item::If(
 				Condition::Equals(Box::new(Item::Value(String::from("foo"))), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Cell(1, None)),
 				None
@@ -976,7 +1062,7 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1>=='foo'(<cell2>)"),
-			(
+			Item::If(
 				Condition::Equals(Box::new(Item::Value(String::from("foo"))), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Cell(1, None)),
 				None
@@ -985,7 +1071,7 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1> == <cell666> (<cell2>)"),
-			(
+			Item::If(
 				Condition::Equals(Box::new(Item::Cell(665, None)), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Cell(1, None)),
 				None
@@ -997,7 +1083,7 @@ mod tests {
 	fn conditional_notequals_test() {
 		assert_eq!(
 			Condition::parse("<cell1> != 'foo' ('yay') ELSE (<cell2>)"),
-			(
+			Item::If(
 				Condition::NotEquals(Box::new(Item::Value(String::from("foo"))), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("yay"))),
 				Some(Box::new(Item::Cell(1, None)))
@@ -1006,7 +1092,7 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1>    != 'foo' (<cell2>)"),
-			(
+			Item::If(
 				Condition::NotEquals(Box::new(Item::Value(String::from("foo"))), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Cell(1, None)),
 				None
@@ -1015,7 +1101,7 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1>!='foo'(<cell2>)"),
-			(
+			Item::If(
 				Condition::NotEquals(Box::new(Item::Value(String::from("foo"))), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Cell(1, None)),
 				None
@@ -1024,7 +1110,7 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1> != <cell666> (<cell2>)"),
-			(
+			Item::If(
 				Condition::NotEquals(Box::new(Item::Cell(665, None)), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Cell(1, None)),
 				None
@@ -1036,7 +1122,7 @@ mod tests {
 	fn conditional_greaterthan_test() {
 		assert_eq!(
 			Condition::parse("<cell1> > 5 ('yay') ELSE (<cell2>)"),
-			(
+			Item::If(
 				Condition::GreaterThan(5, Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("yay"))),
 				Some(Box::new(Item::Cell(1, None)))
@@ -1045,12 +1131,12 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1> > 666 (<cell2>)"),
-			(Condition::GreaterThan(666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(Condition::GreaterThan(666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
 		);
 
 		assert_eq!(
 			Condition::parse("<cell1>  >   -666      (<cell2>)"),
-			(Condition::GreaterThan(-666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(Condition::GreaterThan(-666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
 		);
 	}
 
@@ -1058,7 +1144,7 @@ mod tests {
 	fn conditional_lessthan_test() {
 		assert_eq!(
 			Condition::parse("<cell1> < 5 ('yay') ELSE (<cell2>)"),
-			(
+			Item::If(
 				Condition::LessThan(5, Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("yay"))),
 				Some(Box::new(Item::Cell(1, None)))
@@ -1067,12 +1153,12 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1> < 666 (<cell2>)"),
-			(Condition::LessThan(666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(Condition::LessThan(666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
 		);
 
 		assert_eq!(
 			Condition::parse("<cell1>  <   -666      (<cell2>)"),
-			(Condition::LessThan(-666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(Condition::LessThan(-666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
 		);
 	}
 
@@ -1080,7 +1166,7 @@ mod tests {
 	fn conditional_modulo_test() {
 		assert_eq!(
 			Condition::parse("<cell1> % 3 = 0 ('yay') ELSE (<cell2>)"),
-			(
+			Item::If(
 				Condition::Modulo(3, 0, Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("yay"))),
 				Some(Box::new(Item::Cell(1, None)))
@@ -1089,7 +1175,7 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1>  %  42   =  -20  (<cell2>)"),
-			(Condition::Modulo(42, -20, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(Condition::Modulo(42, -20, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
 		);
 	}
 }
