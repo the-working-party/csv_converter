@@ -131,7 +131,7 @@ In this example we're splitting a single input line into two resulting in double
 
 
 TODO:
-- [ ] Add `:IF <celle1> [condition] '' ELSE ''` and `:IF <celle1> [condition] <cell2> ELSE <cell3>`
+- [ ] Add `:IF <celle1> [condition] ('') ELSE ('')` and `:IF <celle1> [condition] (<cell2>) ELSE (<cell3>)`
   - [ ] Support `:IF <cell1> == 'this item'` => `Condition::Equals(String, Box<Item>)`
   - [ ] Support `:IF <cell1> != 'this item'` => `Condition::NotEquals(String, Box<Item>)`
   - [ ] Support `:IF <cell1> > 42` => `Condition::GreaterThan(i64, Box<Item>)`

@@ -27,7 +27,7 @@ pub fn run(input_line: &[Vec<String>], output_config: &OutputConfig) -> Vec<Vec<
 						exit_with_error(1);
 					},
 				},
-				Item::If(_condition, _else) => {
+				Item::If(_condition, _then_item, _else_item) => {
 					// TODO: execute if condition here
 				},
 				Item::Value(v) => line.push(v.clone()),

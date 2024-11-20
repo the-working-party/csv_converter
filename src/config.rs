@@ -22,8 +22,11 @@ pub enum Condition {
 }
 
 impl Condition {
-	pub fn parse(_condition_str: &str) -> (Self, Option<Box<Item>>) {
-		// "<celle1 REPLACE|' '|'-' SUB_STRING|10|5> [condition] <cell2> ELSE <cell3>"
+	pub fn parse(condition_str: &str) -> (Self, Box<Item>, Option<Box<Item>>) {
+		// "<celle1> IS_EMPTY ('Nothing') ELSE (<cell3>)"
+		// "<celle1 REPLACE|'\''|'-' SUB_STRING|10|5> == 'this item' (<cell2>) ELSE (<cell3>)"
+		// "<celle1 SPLIT|'\''|3> STARTS_WITH|'beginning' ('HARDCODED') ELSE ('HARDCODED)"
+		// "<cell1> IS_EMPTY ('foo')"
 		// == 'this item'
 		// != 'this item'
 		// > 42
@@ -32,17 +35,119 @@ impl Condition {
 		// STARTS_WITH|'beginning'
 		// IS_EMPTY
 
-		// let condition;
-		// let else_item;
-		// let in_cell;
-		// let in_quote;
-		// let escaped;
+		let usage = "\n\
+		The syntax of an IF condition is: :IF <cell[x]> [condition] ([then-item]) [ELSE ([else-item])]\n\
+		Examples:\n\
+		:IF <cell1> == 'blue' ('green')\n\
+		:IF <cell1> == 'blue' (<cell2>)\n\
+		:IF <cell1 UPPER_CASE> == 'blue' ('green')\n\
+		:IF <cell1> == 'blue' ('green') ELSE ('red')";
 
-		// for c in condition_str.trim().chars() {
-		// 	let if_item;
-		// }
+		if !condition_str.starts_with("<cell") {
+			eprintln!("Condition error: Condition must start with <cell> item, was \"{condition_str}\"{usage}");
+			exit_with_error(1);
+		}
 
-		(Self::IsEmpty(Box::new(Item::Value(String::from("")))), None)
+		if !condition_str.ends_with(")") {
+			eprintln!("Condition error: Condition must end with a then-item or an else-item, was \"{condition_str}\"{usage}");
+			exit_with_error(1);
+		}
+
+		let mut condition = None;
+		let mut condition_item = None;
+		let mut then_item = None;
+		let mut else_item = None;
+		let mut in_quotes = false;
+		let mut escaped = false;
+		let mut buffer = String::new();
+
+		for c in condition_str.chars() {
+			match c {
+				'\'' => {
+					if !escaped {
+						in_quotes = !in_quotes;
+					} else {
+						buffer.push(c);
+						escaped = false;
+					}
+				},
+				'\\' => {
+					escaped = !escaped;
+				},
+				'>' => {
+					buffer.push(c);
+					if !in_quotes {
+						if condition_item.is_none() {
+							condition_item = Some(Item::parse(buffer.trim().to_string()));
+						} else if then_item.is_none() {
+							then_item = Some(Item::parse(buffer.trim().to_string()));
+						} else {
+							else_item = Some(Box::new(Item::parse(buffer.trim().to_string())));
+						}
+						buffer.clear();
+					} else {
+						escaped = false;
+					}
+				},
+				'(' => {
+					if !in_quotes {
+						if condition.is_none() {
+							condition = Some(buffer.trim().to_string());
+						}
+						buffer.clear();
+					} else {
+						buffer.push(c);
+					}
+				},
+				')' => {
+					if !in_quotes {
+						if then_item.is_none() {
+							then_item = Some(Item::parse(buffer.trim().to_string()));
+						} else if else_item.is_none() {
+							else_item = Some(Box::new(Item::parse(buffer.trim().to_string())));
+						}
+						buffer.clear();
+					} else {
+						buffer.push(c);
+					}
+				},
+				_ => {
+					escaped = false;
+					buffer.push(c);
+				},
+			}
+		}
+
+		if condition.is_none() {
+			eprintln!("Condition error: Condition not found, was \"{condition_str}\"{usage}");
+			exit_with_error(1);
+		}
+
+		if condition_item.is_none() {
+			eprintln!("Condition error: Condition item not found, was \"{condition_str}\"{usage}");
+			exit_with_error(1);
+		}
+
+		if then_item.is_none() {
+			eprintln!(
+				"Condition error: Then item not found, was \"{condition_str}\"\
+				The syntax of an IF condition is: :IF <cell[x]> [condition] ([then-item]) [ELSE ([else-item])]\
+				Examples:\
+				:IF <cell1> == 'blue' ('green')\
+				:IF <cell1> == 'blue' (<cell2>)\
+				:IF <cell1 UPPER_CASE> == 'blue' ('green')\
+				:IF <cell1> == 'blue' ('green') ELSE ('red')"
+			);
+			exit_with_error(1);
+		}
+
+		println!(
+			"condition={condition:?} condition_item={condition_item:?} then_item={then_item:?} else_item={else_item:?}"
+		);
+
+		// TODO: parse condition string
+
+		(Self::IsEmpty(Box::new(Item::Value(String::from("")))), Box::new(then_item.unwrap()), else_item)
 	}
 }
 
@@ -66,7 +171,7 @@ impl Filter {
 		let mut in_quotes = false;
 		let mut escaped = false;
 		let mut filters_str = Vec::new();
-		let mut temp_filter = String::new();
+		let mut buffer = String::new();
 		let mut filters = Vec::new();
 
 		for c in filter_str.trim().chars() {
@@ -75,7 +180,7 @@ impl Filter {
 					if !escaped {
 						in_quotes = !in_quotes;
 					} else {
-						temp_filter.push(c);
+						buffer.push(c);
 						escaped = false;
 					}
 				},
@@ -84,20 +189,20 @@ impl Filter {
 				},
 				' ' => {
 					if !in_quotes {
-						filters_str.push(temp_filter.clone());
-						temp_filter.clear();
+						filters_str.push(buffer.clone());
+						buffer.clear();
 						escaped = false;
 					} else {
-						temp_filter.push(c);
+						buffer.push(c);
 					}
 				},
 				_ => {
 					escaped = false;
-					temp_filter.push(c);
+					buffer.push(c);
 				},
 			}
 		}
-		filters_str.push(temp_filter.clone());
+		filters_str.push(buffer.clone());
 
 		for filter in filters_str {
 			match filter.as_str() {
@@ -267,7 +372,7 @@ impl Filter {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Item {
 	Value(String),
-	If(Condition, Option<Box<Item>>),
+	If(Condition, Box<Item>, Option<Box<Item>>),
 	Cell(usize, Option<Vec<Filter>>),
 }
 
@@ -299,8 +404,8 @@ impl Item {
 				},
 			}
 		} else if let Some(condition) = input.strip_prefix(":IF ") {
-			let (condition, else_condition) = Condition::parse(condition);
-			Item::If(condition, else_condition)
+			let (condition, then_item, else_item) = Condition::parse(condition);
+			Item::If(condition, then_item, else_item)
 		} else {
 			Item::Value(input.to_string())
 		}
@@ -354,14 +459,18 @@ mod tests {
 		);
 
 		assert_eq!(
-			OutputConfig::new(CsvParser::new(Cursor::new("h1,h2,h3,h4\n<cell1>,,hardcoded,:IF my condition\n"))),
+			OutputConfig::new(CsvParser::new(Cursor::new("h1,h2,h3,h4\n<cell1>,,hardcoded,:IF <cell1> IS_EMPTY ('foo')\n"))),
 			OutputConfig {
 				heading: String::from("h1,h2,h3,h4"),
 				lines: vec![vec![
 					Item::Cell(0, None),
 					Item::Value(String::from("")),
 					Item::Value(String::from("hardcoded")),
-					Item::If(Condition::IsEmpty(Box::new(Item::Value(String::from("")))), None),
+					Item::If(
+						Condition::IsEmpty(Box::new(Item::Value(String::from("")))),
+						Box::new(Item::Value(String::from("foo"))),
+						None
+					),
 				]],
 			}
 		);
@@ -667,6 +776,7 @@ mod tests {
 
 	#[test]
 	fn condition_parse_test() {
+		Condition::parse("<cell1> == 'this item' ('yay') ELSE (<cell2>)");
 		// assert_eq!();
 	}
 }
