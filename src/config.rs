@@ -161,7 +161,8 @@ impl Condition {
 				Condition::Equals(Box::new(Item::parse(c[start..c.len()].to_string())), Box::new(condition_item.unwrap()))
 			},
 			c if c.starts_with("!=") => {
-				Condition::NotEquals(Box::new(Item::Value(String::from(""))), Box::new(condition_item.unwrap()))
+				let start = if &c[2..3] == " " { 3 } else { 2 };
+				Condition::NotEquals(Box::new(Item::parse(c[start..c.len()].to_string())), Box::new(condition_item.unwrap()))
 			},
 			c if c.starts_with(">") => Condition::GreaterThan(0, Box::new(condition_item.unwrap())),
 			c if c.starts_with("<") => Condition::LessThan(0, Box::new(condition_item.unwrap())),
@@ -957,7 +958,43 @@ mod tests {
 	}
 
 	#[test]
-	fn conditional_notequals_test() {}
+	fn conditional_notequals_test() {
+		assert_eq!(
+			Condition::parse("<cell1> != 'foo' ('yay') ELSE (<cell2>)"),
+			(
+				Condition::NotEquals(Box::new(Item::Value(String::from("foo"))), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Value(String::from("yay"))),
+				Some(Box::new(Item::Cell(1, None)))
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> != 'foo' (<cell2>)"),
+			(
+				Condition::NotEquals(Box::new(Item::Value(String::from("foo"))), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1>!='foo'(<cell2>)"),
+			(
+				Condition::NotEquals(Box::new(Item::Value(String::from("foo"))), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> != <cell666> (<cell2>)"),
+			(
+				Condition::NotEquals(Box::new(Item::Cell(665, None)), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
+		);
+	}
 
 	#[test]
 	fn conditional_greaterthan_test() {}

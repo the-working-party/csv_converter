@@ -139,7 +139,7 @@ TODO:
   - [x] Support `:IF <cell1> ENDS_WITH|'end'` => `Condition::EndsWith(String, Box<Item>)`
   - [x] Support `:IF <cell1> CONTAINS|'happieness'` or `:IF <cell1> CONTAINS 'happy','sad'` => `Condition::Contains(String, Box<Item>)`
   - [x] Support `:IF <cell1> == 'this item'` => `Condition::Equals(String, Box<Item>)`
-  - [ ] Support `:IF <cell1> != 'this item'` => `Condition::NotEquals(String, Box<Item>)`
+  - [x] Support `:IF <cell1> != 'this item'` => `Condition::NotEquals(String, Box<Item>)`
   - [ ] Support `:IF <cell1> > 42` => `Condition::GreaterThan(i64, Box<Item>)`
   - [ ] Support `:IF <cell1> < 42` => `Condition::LessThan(i64, Box<Item>)`
   - [ ] Support `:IF <cell1> % 2 = 0` => `Condition::Modulo(i64, i64, Box<Item>)`
