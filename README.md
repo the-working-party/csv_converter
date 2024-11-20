@@ -140,10 +140,10 @@ TODO:
   - [x] Support `:IF <cell1> CONTAINS|'happieness'` or `:IF <cell1> CONTAINS 'happy','sad'` => `Condition::Contains(String, Box<Item>)`
   - [x] Support `:IF <cell1> == 'this item'` => `Condition::Equals(String, Box<Item>)`
   - [x] Support `:IF <cell1> != 'this item'` => `Condition::NotEquals(String, Box<Item>)`
-  - [ ] Support `:IF <cell1> > 42` => `Condition::GreaterThan(i64, Box<Item>)`
-  - [ ] Support `:IF <cell1> < 42` => `Condition::LessThan(i64, Box<Item>)`
-  - [ ] Support `:IF <cell1> % 2 = 0` => `Condition::Modulo(i64, i64, Box<Item>)`
-  - [ ] Support `ELSE`
+  - [x] Support `:IF <cell1> > 42` => `Condition::GreaterThan(i64, Box<Item>)`
+  - [x] Support `:IF <cell1> < 42` => `Condition::LessThan(i64, Box<Item>)`
+  - [x] Support `:IF <cell1> % 2 = 0` => `Condition::Modulo(i64, i64, Box<Item>)`
+  - [x] Support `ELSE`
 - [x] Add support for string manipulation on `<cell>`
   - [x] Support `<cell1 UPPER_CASE>` => `FILTER::UpperCase`
   - [x] Support `<cell1 LOWER_CASE>` => `FILTER::LowerCase`

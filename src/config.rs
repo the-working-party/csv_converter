@@ -132,14 +132,6 @@ impl Condition {
 			exit_with_error(1);
 		}
 
-		// == 'this item'
-		// != 'this item'
-		// > 42
-		// < 42
-		// % 2 = 0
-		// STARTS_WITH|'beginning'
-		// IS_EMPTY
-		// TODO: parse condition string
 		let condition = match condition.unwrap().as_str() {
 			c if c.starts_with("IS_EMPTY") => Condition::IsEmpty(Box::new(condition_item.unwrap())),
 			c if c.starts_with("IS_NOT_EMPTY") => Condition::IsNotEmpty(Box::new(condition_item.unwrap())),
@@ -157,16 +149,63 @@ impl Condition {
 				Condition::Contains(needle[1].to_string(), Box::new(condition_item.unwrap()))
 			},
 			c if c.starts_with("==") => {
-				let start = if &c[2..3] == " " { 3 } else { 2 };
+				let start = if &c.replace("  ", " ")[2..3] == " " { 3 } else { 2 };
 				Condition::Equals(Box::new(Item::parse(c[start..c.len()].to_string())), Box::new(condition_item.unwrap()))
 			},
 			c if c.starts_with("!=") => {
-				let start = if &c[2..3] == " " { 3 } else { 2 };
+				let start = if &c.replace("  ", " ")[2..3] == " " { 3 } else { 2 };
 				Condition::NotEquals(Box::new(Item::parse(c[start..c.len()].to_string())), Box::new(condition_item.unwrap()))
 			},
-			c if c.starts_with(">") => Condition::GreaterThan(0, Box::new(condition_item.unwrap())),
-			c if c.starts_with("<") => Condition::LessThan(0, Box::new(condition_item.unwrap())),
-			c if c.starts_with("%") => Condition::Modulo(0, 0, Box::new(condition_item.unwrap())),
+			c if c.starts_with(">") => {
+				let int = c.replace(">", "");
+				let int = match int.trim().parse::<i64>() {
+					Ok(value) => value,
+					Err(_) => {
+						eprintln!("Condition error: The greater than filter number cannot be parsed, was \"{}\"", int.trim());
+						exit_with_error(1);
+					},
+				};
+				Condition::GreaterThan(int, Box::new(condition_item.unwrap()))
+			},
+			c if c.starts_with("<") => {
+				let int = c.replace("<", "");
+				let int = match int.trim().parse::<i64>() {
+					Ok(value) => value,
+					Err(_) => {
+						eprintln!("Condition error: The less than filter number cannot be parsed, was \"{}\"", int.trim());
+						exit_with_error(1);
+					},
+				};
+				Condition::LessThan(int, Box::new(condition_item.unwrap()))
+			},
+			c if c.starts_with("%") => {
+				let modulo = c.replace("%", "").replace("  ", " ");
+				let ints = modulo.splitn(2, "=").collect::<Vec<&str>>();
+				if ints.len() != 2 {
+					eprintln!(
+						"Condition error: The modulo filter is missing divisor or remainder, was \"{modulo}\" but should be \":IF <cell1> % 2 = 0\"",
+					);
+					exit_with_error(1);
+				}
+				let divisor = match ints[0].trim().parse::<i64>() {
+					Ok(value) => value,
+					Err(_) => {
+						eprintln!("Condition error: The divisor of the modulo filter cannot be parsed, was \"{}\"", ints[0].trim());
+						exit_with_error(1);
+					},
+				};
+				let remainder = match ints[1].trim().parse::<i64>() {
+					Ok(value) => value,
+					Err(_) => {
+						eprintln!(
+							"Condition error: The remainder of the modulo filter cannot be parsed, was \"{}\"",
+							ints[1].trim()
+						);
+						exit_with_error(1);
+					},
+				};
+				Condition::Modulo(divisor, remainder, Box::new(condition_item.unwrap()))
+			},
 			c => {
 				eprintln!("Condition error: If condition not recognized, was \"{c}\"{usage}");
 				exit_with_error(1);
@@ -175,6 +214,9 @@ impl Condition {
 
 		(condition, Box::new(then_item.unwrap()), else_item)
 	}
+
+	// TODO: create run function
+	// pub fn run() {}
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -797,12 +839,6 @@ mod tests {
 	}
 
 	#[test]
-	fn condition_parse_test() {
-		Condition::parse("<cell1> == 'this item' ('yay') ELSE (<cell2>)");
-		// TODO: Fill out test
-	}
-
-	#[test]
 	fn conditional_isempty_test() {
 		assert_eq!(
 			Condition::parse("<cell1> IS_EMPTY ('yay') ELSE (<cell2>)"),
@@ -969,7 +1005,7 @@ mod tests {
 		);
 
 		assert_eq!(
-			Condition::parse("<cell1> != 'foo' (<cell2>)"),
+			Condition::parse("<cell1>    != 'foo' (<cell2>)"),
 			(
 				Condition::NotEquals(Box::new(Item::Value(String::from("foo"))), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Cell(1, None)),
@@ -997,11 +1033,63 @@ mod tests {
 	}
 
 	#[test]
-	fn conditional_greaterthan_test() {}
+	fn conditional_greaterthan_test() {
+		assert_eq!(
+			Condition::parse("<cell1> > 5 ('yay') ELSE (<cell2>)"),
+			(
+				Condition::GreaterThan(5, Box::new(Item::Cell(0, None))),
+				Box::new(Item::Value(String::from("yay"))),
+				Some(Box::new(Item::Cell(1, None)))
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> > 666 (<cell2>)"),
+			(Condition::GreaterThan(666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1>  >   -666      (<cell2>)"),
+			(Condition::GreaterThan(-666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+		);
+	}
 
 	#[test]
-	fn conditional_lessthan_test() {}
+	fn conditional_lessthan_test() {
+		assert_eq!(
+			Condition::parse("<cell1> < 5 ('yay') ELSE (<cell2>)"),
+			(
+				Condition::LessThan(5, Box::new(Item::Cell(0, None))),
+				Box::new(Item::Value(String::from("yay"))),
+				Some(Box::new(Item::Cell(1, None)))
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> < 666 (<cell2>)"),
+			(Condition::LessThan(666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1>  <   -666      (<cell2>)"),
+			(Condition::LessThan(-666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+		);
+	}
 
 	#[test]
-	fn conditional_modulo_test() {}
+	fn conditional_modulo_test() {
+		assert_eq!(
+			Condition::parse("<cell1> % 3 = 0 ('yay') ELSE (<cell2>)"),
+			(
+				Condition::Modulo(3, 0, Box::new(Item::Cell(0, None))),
+				Box::new(Item::Value(String::from("yay"))),
+				Some(Box::new(Item::Cell(1, None)))
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1>  %  42   =  -20  (<cell2>)"),
+			(Condition::Modulo(42, -20, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+		);
+	}
 }
