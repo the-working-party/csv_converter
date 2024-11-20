@@ -132,17 +132,17 @@ In this example we're splitting a single input line into two resulting in double
 
 TODO:
 - [ ] Add `:IF <celle1> [condition] ('') ELSE ('')` and `:IF <celle1> [condition] (<cell2>) ELSE (<cell3>)`
-  - [ ] Support `:IF <cell1> == 'this item'` => `Condition::Equals(String, Box<Item>)`
+  - [x] Support `:IF <cell1> IS_EMPTY` => `Condition::IsEmpty(Box<Item>)`
+  - [x] Support `:IF <cell1> IS_NOT_EMPTY` => `Condition::IsNotEmpty(Box<Item>)`
+  - [x] Support `:IF <cell1> IS_NUMERIC` => `Condition::IsNumeric(Box<Item>)`
+  - [x] Support `:IF <cell1> STARTS_WITH|'beginning'` => `Condition::StartesWith(String, Box<Item>)`
+  - [x] Support `:IF <cell1> ENDS_WITH|'end'` => `Condition::EndsWith(String, Box<Item>)`
+  - [x] Support `:IF <cell1> CONTAINS|'happieness'` or `:IF <cell1> CONTAINS 'happy','sad'` => `Condition::Contains(String, Box<Item>)`
+  - [x] Support `:IF <cell1> == 'this item'` => `Condition::Equals(String, Box<Item>)`
   - [ ] Support `:IF <cell1> != 'this item'` => `Condition::NotEquals(String, Box<Item>)`
   - [ ] Support `:IF <cell1> > 42` => `Condition::GreaterThan(i64, Box<Item>)`
   - [ ] Support `:IF <cell1> < 42` => `Condition::LessThan(i64, Box<Item>)`
   - [ ] Support `:IF <cell1> % 2 = 0` => `Condition::Modulo(i64, i64, Box<Item>)`
-  - [ ] Support `:IF <cell1> STARTS_WITH|'beginning'` => `Condition::StartesWith(String, Box<Item>)`
-  - [ ] Support `:IF <cell1> ENDS_WITH|'end'` => `Condition::EndsWith(String, Box<Item>)`
-  - [ ] Support `:IF <cell1> CONTAINS|'happieness'` or `:IF <cell1> CONTAINS 'happy','sad'` => `Condition::Contains(String, Box<Item>)`
-  - [ ] Support `:IF <cell1> IS_EMPTY` => `Condition::IsEmpty(Box<Item>)`
-  - [ ] Support `:IF <cell1> IS_NOT_EMPTY` => `Condition::IsNotEmpty(Box<Item>)`
-  - [ ] Support `:IF <cell1> IS_NUMERIC` => `Condition::IsNumeric(Box<Item>)`
   - [ ] Support `ELSE`
 - [x] Add support for string manipulation on `<cell>`
   - [x] Support `<cell1 UPPER_CASE>` => `FILTER::UpperCase`
