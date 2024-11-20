@@ -7,39 +7,27 @@ use crate::{
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Condition {
-	_Equals(String, Box<Item>),
-	_NotEquals(String, Box<Item>),
-	_GreaterThan(i64, Box<Item>),
-	_LessThan(i64, Box<Item>),
-	_Modulo(i64, i64, Box<Item>),
-	_StartesWith(String, Box<Item>),
-	_EndsWith(String, Box<Item>),
-	_Contains(String, Box<Item>),
 	IsEmpty(Box<Item>),
-	_IsNotEmpty(Box<Item>),
-	_IsNumeric(Box<Item>),
+	IsNotEmpty(Box<Item>),
+	IsNumeric(Box<Item>),
+	StartesWith(String, Box<Item>),
+	EndsWith(String, Box<Item>),
+	Contains(String, Box<Item>),
+	Equals(Box<Item>, Box<Item>),
+	NotEquals(Box<Item>, Box<Item>),
+	GreaterThan(i64, Box<Item>),
+	LessThan(i64, Box<Item>),
+	Modulo(i64, i64, Box<Item>),
 	// TODO: date functions
 }
 
 impl Condition {
 	pub fn parse(condition_str: &str) -> (Self, Box<Item>, Option<Box<Item>>) {
-		// "<celle1> IS_EMPTY ('Nothing') ELSE (<cell3>)"
-		// "<celle1 REPLACE|'\''|'-' SUB_STRING|10|5> == 'this item' (<cell2>) ELSE (<cell3>)"
-		// "<celle1 SPLIT|'\''|3> STARTS_WITH|'beginning' ('HARDCODED') ELSE ('HARDCODED)"
-		// "<cell1> IS_EMPTY ('foo')"
-		// == 'this item'
-		// != 'this item'
-		// > 42
-		// < 42
-		// % 2 = 0
-		// STARTS_WITH|'beginning'
-		// IS_EMPTY
-
 		let usage = "\n\
 		The syntax of an IF condition is: :IF <cell[x]> [condition] ([then-item]) [ELSE ([else-item])]\n\
 		Examples:\n\
 		:IF <cell1> == 'blue' ('green')\n\
-		:IF <cell1> == 'blue' (<cell2>)\n\
+		:IF <cell1> == <cell42> (<cell2>)\n\
 		:IF <cell1 UPPER_CASE> == 'blue' ('green')\n\
 		:IF <cell1> == 'blue' ('green') ELSE ('red')";
 
@@ -58,6 +46,7 @@ impl Condition {
 		let mut then_item = None;
 		let mut else_item = None;
 		let mut in_quotes = false;
+		let mut in_condition = false;
 		let mut escaped = false;
 		let mut buffer = String::new();
 
@@ -79,18 +68,28 @@ impl Condition {
 					if !in_quotes {
 						if condition_item.is_none() {
 							condition_item = Some(Item::parse(buffer.trim().to_string()));
+							in_condition = true;
+							buffer.clear();
 						} else if then_item.is_none() {
-							then_item = Some(Item::parse(buffer.trim().to_string()));
+							if !in_condition {
+								then_item = Some(Item::parse(buffer.trim().to_string()));
+								buffer.clear();
+							}
 						} else {
-							else_item = Some(Box::new(Item::parse(buffer.trim().to_string())));
+							if !in_condition {
+								else_item = Some(Box::new(Item::parse(buffer.trim().to_string())));
+							} else {
+								buffer.push(c);
+							}
+							buffer.clear();
 						}
-						buffer.clear();
 					} else {
 						escaped = false;
 					}
 				},
 				'(' => {
 					if !in_quotes {
+						in_condition = false;
 						if condition.is_none() {
 							condition = Some(buffer.trim().to_string());
 						}
@@ -103,7 +102,7 @@ impl Condition {
 					if !in_quotes {
 						if then_item.is_none() {
 							then_item = Some(Item::parse(buffer.trim().to_string()));
-						} else if else_item.is_none() {
+						} else if else_item.is_none() && !buffer.is_empty() {
 							else_item = Some(Box::new(Item::parse(buffer.trim().to_string())));
 						}
 						buffer.clear();
@@ -129,25 +128,51 @@ impl Condition {
 		}
 
 		if then_item.is_none() {
-			eprintln!(
-				"Condition error: Then item not found, was \"{condition_str}\"\
-				The syntax of an IF condition is: :IF <cell[x]> [condition] ([then-item]) [ELSE ([else-item])]\
-				Examples:\
-				:IF <cell1> == 'blue' ('green')\
-				:IF <cell1> == 'blue' (<cell2>)\
-				:IF <cell1 UPPER_CASE> == 'blue' ('green')\
-				:IF <cell1> == 'blue' ('green') ELSE ('red')"
-			);
+			eprintln!("Condition error: Then item not found, was \"{condition_str}\"{usage}");
 			exit_with_error(1);
 		}
 
-		println!(
-			"condition={condition:?} condition_item={condition_item:?} then_item={then_item:?} else_item={else_item:?}"
-		);
-
+		// == 'this item'
+		// != 'this item'
+		// > 42
+		// < 42
+		// % 2 = 0
+		// STARTS_WITH|'beginning'
+		// IS_EMPTY
 		// TODO: parse condition string
+		let condition = match condition.unwrap().as_str() {
+			c if c.starts_with("IS_EMPTY") => Condition::IsEmpty(Box::new(condition_item.unwrap())),
+			c if c.starts_with("IS_NOT_EMPTY") => Condition::IsNotEmpty(Box::new(condition_item.unwrap())),
+			c if c.starts_with("IS_NUMERIC") => Condition::IsNumeric(Box::new(condition_item.unwrap())),
+			c if c.starts_with("STARTS_WITH") => {
+				let needle = c.splitn(2, '|').collect::<Vec<&str>>();
+				Condition::StartesWith(needle[1].to_string(), Box::new(condition_item.unwrap()))
+			},
+			c if c.starts_with("ENDS_WITH") => {
+				let needle = c.splitn(2, '|').collect::<Vec<&str>>();
+				Condition::EndsWith(needle[1].to_string(), Box::new(condition_item.unwrap()))
+			},
+			c if c.starts_with("CONTAINS") => {
+				let needle = c.splitn(2, '|').collect::<Vec<&str>>();
+				Condition::Contains(needle[1].to_string(), Box::new(condition_item.unwrap()))
+			},
+			c if c.starts_with("==") => {
+				let start = if &c[2..3] == " " { 3 } else { 2 };
+				Condition::Equals(Box::new(Item::parse(c[start..c.len()].to_string())), Box::new(condition_item.unwrap()))
+			},
+			c if c.starts_with("!=") => {
+				Condition::NotEquals(Box::new(Item::Value(String::from(""))), Box::new(condition_item.unwrap()))
+			},
+			c if c.starts_with(">") => Condition::GreaterThan(0, Box::new(condition_item.unwrap())),
+			c if c.starts_with("<") => Condition::LessThan(0, Box::new(condition_item.unwrap())),
+			c if c.starts_with("%") => Condition::Modulo(0, 0, Box::new(condition_item.unwrap())),
+			c => {
+				eprintln!("Condition error: If condition not recognized, was \"{c}\"{usage}");
+				exit_with_error(1);
+			},
+		};
 
-		(Self::IsEmpty(Box::new(Item::Value(String::from("")))), Box::new(then_item.unwrap()), else_item)
+		(condition, Box::new(then_item.unwrap()), else_item)
 	}
 }
 
@@ -466,11 +491,7 @@ mod tests {
 					Item::Cell(0, None),
 					Item::Value(String::from("")),
 					Item::Value(String::from("hardcoded")),
-					Item::If(
-						Condition::IsEmpty(Box::new(Item::Value(String::from("")))),
-						Box::new(Item::Value(String::from("foo"))),
-						None
-					),
+					Item::If(Condition::IsEmpty(Box::new(Item::Cell(0, None))), Box::new(Item::Value(String::from("foo"))), None),
 				]],
 			}
 		);
@@ -777,6 +798,173 @@ mod tests {
 	#[test]
 	fn condition_parse_test() {
 		Condition::parse("<cell1> == 'this item' ('yay') ELSE (<cell2>)");
-		// assert_eq!();
+		// TODO: Fill out test
 	}
+
+	#[test]
+	fn conditional_isempty_test() {
+		assert_eq!(
+			Condition::parse("<cell1> IS_EMPTY ('yay') ELSE (<cell2>)"),
+			(
+				Condition::IsEmpty(Box::new(Item::Cell(0, None))),
+				Box::new(Item::Value(String::from("yay"))),
+				Some(Box::new(Item::Cell(1, None)))
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> IS_EMPTY (<cell2>)"),
+			(Condition::IsEmpty(Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+		);
+	}
+
+	#[test]
+	fn conditional_isnotempty_test() {
+		assert_eq!(
+			Condition::parse("<cell1> IS_NOT_EMPTY ('yay') ELSE (<cell2>)"),
+			(
+				Condition::IsNotEmpty(Box::new(Item::Cell(0, None))),
+				Box::new(Item::Value(String::from("yay"))),
+				Some(Box::new(Item::Cell(1, None)))
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> IS_NOT_EMPTY (<cell2>)"),
+			(Condition::IsNotEmpty(Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+		);
+	}
+
+	#[test]
+	fn conditional_isnumeric_test() {
+		assert_eq!(
+			Condition::parse("<cell1> IS_NUMERIC ('yay') ELSE (<cell2>)"),
+			(
+				Condition::IsNumeric(Box::new(Item::Cell(0, None))),
+				Box::new(Item::Value(String::from("yay"))),
+				Some(Box::new(Item::Cell(1, None)))
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> IS_NUMERIC (<cell2>)"),
+			(Condition::IsNumeric(Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+		);
+	}
+
+	#[test]
+	fn conditional_starteswith_test() {
+		assert_eq!(
+			Condition::parse("<cell1> STARTS_WITH|'foo' ('ya\\'y') ELSE (<cell2>)"),
+			(
+				Condition::StartesWith(String::from("foo"), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Value(String::from("ya'y"))),
+				Some(Box::new(Item::Cell(1, None)))
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> STARTS_WITH|'foo' (<cell2>)"),
+			(Condition::StartesWith(String::from("foo"), Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> STARTS_WITH|'fo\\'o' (<cell2>)"),
+			(
+				Condition::StartesWith(String::from("fo'o"), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
+		);
+	}
+
+	#[test]
+	fn conditional_endswith_test() {
+		assert_eq!(
+			Condition::parse("<cell1> ENDS_WITH|'foo' ('ya\\'y') ELSE (<cell2>)"),
+			(
+				Condition::EndsWith(String::from("foo"), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Value(String::from("ya'y"))),
+				Some(Box::new(Item::Cell(1, None)))
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> ENDS_WITH|'foo' (<cell2>)"),
+			(Condition::EndsWith(String::from("foo"), Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> ENDS_WITH|'fo\\'o' (<cell2>)"),
+			(Condition::EndsWith(String::from("fo'o"), Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+		);
+	}
+
+	#[test]
+	fn conditional_contains_test() {
+		assert_eq!(
+			Condition::parse("<cell1> CONTAINS|'foo' ('yay') ELSE (<cell2>)"),
+			(
+				Condition::Contains(String::from("foo"), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Value(String::from("yay"))),
+				Some(Box::new(Item::Cell(1, None)))
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> CONTAINS|'foo' (<cell2>)"),
+			(Condition::Contains(String::from("foo"), Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+		);
+	}
+
+	#[test]
+	fn conditional_equals_test() {
+		assert_eq!(
+			Condition::parse("<cell1> == 'foo' ('yay') ELSE (<cell2>)"),
+			(
+				Condition::Equals(Box::new(Item::Value(String::from("foo"))), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Value(String::from("yay"))),
+				Some(Box::new(Item::Cell(1, None)))
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> == 'foo' (<cell2>)"),
+			(
+				Condition::Equals(Box::new(Item::Value(String::from("foo"))), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1>=='foo'(<cell2>)"),
+			(
+				Condition::Equals(Box::new(Item::Value(String::from("foo"))), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
+		);
+
+		assert_eq!(
+			Condition::parse("<cell1> == <cell666> (<cell2>)"),
+			(
+				Condition::Equals(Box::new(Item::Cell(665, None)), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
+		);
+	}
+
+	#[test]
+	fn conditional_notequals_test() {}
+
+	#[test]
+	fn conditional_greaterthan_test() {}
+
+	#[test]
+	fn conditional_lessthan_test() {}
+
+	#[test]
+	fn conditional_modulo_test() {}
 }
