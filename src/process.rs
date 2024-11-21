@@ -7,6 +7,7 @@ use crate::{
 
 pub fn run(input_line: &Vec<String>, output_config: &OutputConfig) -> Vec<Vec<String>> {
 	let mut new_lines = Vec::new();
+	let mut skip_line = false;
 	for items in &output_config.lines {
 		let mut line: Vec<String> = Vec::new();
 		for item in items {
@@ -28,12 +29,21 @@ pub fn run(input_line: &Vec<String>, output_config: &OutputConfig) -> Vec<Vec<St
 					},
 				},
 				Item::If(condition, then_item, else_item) => {
-					line.push(condition.run(then_item, &else_item.as_ref().map(|b| (**b).clone()), input_line).to_string())
+					let condition_result =
+						condition.run(then_item, &else_item.as_ref().map(|b| (**b).clone()), input_line).to_string();
+					if &condition_result == "SKIP_LINE" {
+						skip_line = true;
+					}
+					line.push(condition_result)
 				},
 				Item::Value(v) => line.push(v.clone()),
 			}
 		}
-		new_lines.push(line);
+		if skip_line {
+			skip_line = false;
+		} else {
+			new_lines.push(line);
+		}
 	}
 
 	new_lines
@@ -120,6 +130,25 @@ mod tests {
 				vec![String::from("A"), String::from("C"), String::from("B")],
 				vec![String::from("C"), String::from("MERGE"), String::from("C")],
 				vec![String::from("B"), String::from("A"), String::from("NEW")],
+			]
+		);
+	}
+
+	#[test]
+	fn skip_line_test() {
+		assert_eq!(
+			run(
+				&vec![
+					String::from("A"),
+					String::from("B"),
+					String::from("C"),
+					String::from("D")
+				],
+				&OutputConfig::new(CsvParser::new(Cursor::new("Column A,Column B,Column C\n<cell1>,MERGE,<cell2>\n<cell1>,NEW,:IF <cell3> == 'D' ('SKIP_LINE') ELSE (<cell3>)\n<cell1>,NEW,:IF <cell4> == 'D' ('SKIP_LINE') ELSE (<cell4>)\n"))),
+			),
+			vec![
+				vec![String::from("A"), String::from("MERGE"), String::from("B")],
+				vec![String::from("A"), String::from("NEW"), String::from("C")],
 			]
 		);
 	}

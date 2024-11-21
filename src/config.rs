@@ -18,7 +18,6 @@ pub enum Condition {
 	GreaterThan(Box<Item>, Box<Item>),
 	LessThan(Box<Item>, Box<Item>),
 	Modulo(f64, f64, Box<Item>),
-	// TODO: date functions
 }
 
 impl Condition {
