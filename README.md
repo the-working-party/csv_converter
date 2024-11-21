@@ -77,8 +77,6 @@ Each line from you input csv file will be processed via this config.
    ├───────┼───────┼───────────┼─────────┼──────────────┼───────┤
    │<cell1>│<cell2>│  <cell3>  │ <cell4> │   <cell5>    │<cell6>│
    ├───────┼───────┼───────────┼─────────┼──────────────┼───────┤
-   │<cell1>│<cell2>│  <cell3>  │ <cell4> │   <cell5>    │<cell6>│
-   ├───────┼───────┼───────────┼─────────┼──────────────┼───────┤
    │  ...  │  ...  │    ...    │   ...   │     ...      │  ...  │
    ├───────┼───────┼───────────┼─────────┼──────────────┼───────┤
    │  ...  │  ...  │    ...    │   ...   │     ...      │  ...  │
@@ -130,34 +128,55 @@ Each line from you input csv file will be processed via this config.
 In this example we're splitting a single input line into two resulting in double the lines in our output file.
 
 
-TODO:
-- [x] Add `:IF <cell1> [condition] ('') ELSE ('')` and `:IF <cell1> [condition] (<cell2>) ELSE (<cell3>)`
-  - [x] Support `:IF <cell1> IS_EMPTY` => `Condition::IsEmpty(Box<Item>)`
-  - [x] Support `:IF <cell1> IS_NOT_EMPTY` => `Condition::IsNotEmpty(Box<Item>)`
-  - [x] Support `:IF <cell1> IS_NUMERIC` => `Condition::IsNumeric(Box<Item>)`
-  - [x] Support `:IF <cell1> STARTS_WITH|'beginning'` => `Condition::StartesWith(String, Box<Item>)`
-  - [x] Support `:IF <cell1> ENDS_WITH|'end'` => `Condition::EndsWith(String, Box<Item>)`
-  - [x] Support `:IF <cell1> CONTAINS|'happieness'` or `:IF <cell1> CONTAINS 'happy','sad'` => `Condition::Contains(String, Box<Item>)`
-  - [x] Support `:IF <cell1> == 'this item'` => `Condition::Equals(String, Box<Item>)`
-  - [x] Support `:IF <cell1> != 'this item'` => `Condition::NotEquals(String, Box<Item>)`
-  - [x] Support `:IF <cell1> > 42` => `Condition::GreaterThan(i64, Box<Item>)`
-  - [x] Support `:IF <cell1> < 42` => `Condition::LessThan(i64, Box<Item>)`
-  - [x] Support `:IF <cell1> % 2 = 0` => `Condition::Modulo(i64, i64, Box<Item>)`
-  - [x] Support `ELSE`
-- [x] Add support for string manipulation on `<cell>`
-  - [x] Support `<cell1 UPPER_CASE>` => `FILTER::UpperCase`
-  - [x] Support `<cell1 LOWER_CASE>` => `FILTER::LowerCase`
-  - [x] Support `<cell1 SPLIT|','|1>` => `FILTER::Split(String)`
-  - [x] Support `<cell1 SUB_STRING|10|5>` => `FILTER::SubString(u64, Option<u64>)`
-  - [x] Support `<cell1 REPLACE|' '|'-'>` => `FILTER::Replace(String)`
-  - [x] Support `<cell1 APPEND|'-end'>` => `FILTER::Append(String)`
-  - [x] Support `<cell1 PREPEND|'pre-'>` => `FILTER::Prepend(String)`
-  - [x] Support `<cell1 LENGTH>` => `FILTER::Length`
-  - [x] Support `<cell1 TRIM>` => `FILTER::Trim`
-  - [x] Support `<cell1 TRIM_START>` => `FILTER::TrimStart`
-  - [x] Support `<cell1 TRIM_END>` => `FILTER::TrimEnd`
+## Config reference
 
-## Usage
+The config file includes logic and filters that will make it easier for you to generate smarter outputs.
+
+### Filters
+
+Filters allow you to make changes to the content of a cell.
+
+Syntax: `<cell[n] FILTER|'argument'|[number]>`
+
+TODO: add docs for:
+- [ ] `UPPER_CASE`
+- [ ] `LOWER_CASE`
+- [ ] `SPLIT|','|1`
+- [ ] `SUB_STRING|10|5`
+- [ ] `REPLACE|' '|'-'`
+- [ ] `APPEND|'-end'`
+- [ ] `PREPEND|'pre-'`
+- [ ] `LENGTH`
+- [ ] `TRIM`
+- [ ] `TRIM_START`
+- [ ] `TRIM_END`
+
+## Conditions
+
+Conditions allow you to add logic to a cell.
+
+Syntax: `:IF <cell1> [condition] ('then-item') [ELSE ('else-item')]`
+
+- The `ELSE` clause is optional
+- A `then-item` can be a String or a cell: `:IF <cell1> [condition] ('then-item')` or `:IF <cell1> [condition] (<cell2>)`
+
+_(💡  You can also use it to skip an entire line by adding the `SKIP_LINE` into the `then-item` or `else-item`)_
+
+TODO: add docs for:
+- [ ] `IS_EMPTY`
+- [ ] `IS_NOT_EMPTY`
+- [ ] `IS_NUMERIC`
+- [ ] `STARTS_WITH|'beginning'`
+- [ ] `ENDS_WITH|'end'`
+- [ ] `CONTAINS|'happieness'`
+- [ ] `CONTAINS 'happy','`
+- [ ] `== 'this item`
+- [ ] `!= 'this item`
+- [ ] `> 42`
+- [ ] `< 42`
+- [ ] `% 2 = 0`
+
+## CLI Usage
 
 ```sh
 csv2matrixify [OPTIONS]
