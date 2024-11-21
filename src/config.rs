@@ -15,9 +15,9 @@ pub enum Condition {
 	Contains(String, Box<Item>),
 	Equals(Box<Item>, Box<Item>),
 	NotEquals(Box<Item>, Box<Item>),
-	GreaterThan(i64, Box<Item>),
-	LessThan(i64, Box<Item>),
-	Modulo(i64, i64, Box<Item>),
+	GreaterThan(Box<Item>, Box<Item>),
+	LessThan(Box<Item>, Box<Item>),
+	Modulo(f64, f64, Box<Item>),
 	// TODO: date functions
 }
 
@@ -157,26 +157,12 @@ impl Condition {
 				Condition::NotEquals(Box::new(Item::parse(c[start..c.len()].to_string())), Box::new(condition_item.unwrap()))
 			},
 			c if c.starts_with(">") => {
-				let int = c.replace(">", "");
-				let int = match int.trim().parse::<i64>() {
-					Ok(value) => value,
-					Err(_) => {
-						eprintln!("Condition error: The greater than filter number cannot be parsed, was \"{}\"", int.trim());
-						exit_with_error(1);
-					},
-				};
-				Condition::GreaterThan(int, Box::new(condition_item.unwrap()))
+				let c = &c.trim()[1..];
+				Condition::GreaterThan(Box::new(Item::parse(c.trim().to_string())), Box::new(condition_item.unwrap()))
 			},
 			c if c.starts_with("<") => {
-				let int = c.replace("<", "");
-				let int = match int.trim().parse::<i64>() {
-					Ok(value) => value,
-					Err(_) => {
-						eprintln!("Condition error: The less than filter number cannot be parsed, was \"{}\"", int.trim());
-						exit_with_error(1);
-					},
-				};
-				Condition::LessThan(int, Box::new(condition_item.unwrap()))
+				let c = &c.trim()[1..];
+				Condition::LessThan(Box::new(Item::parse(c.trim().to_string())), Box::new(condition_item.unwrap()))
 			},
 			c if c.starts_with("%") => {
 				let modulo = c.replace("%", "").replace("  ", " ");
@@ -187,14 +173,14 @@ impl Condition {
 					);
 					exit_with_error(1);
 				}
-				let divisor = match ints[0].trim().parse::<i64>() {
+				let divisor = match ints[0].trim().parse::<f64>() {
 					Ok(value) => value,
 					Err(_) => {
 						eprintln!("Condition error: The divisor of the modulo filter cannot be parsed, was \"{}\"", ints[0].trim());
 						exit_with_error(1);
 					},
 				};
-				let remainder = match ints[1].trim().parse::<i64>() {
+				let remainder = match ints[1].trim().parse::<f64>() {
 					Ok(value) => value,
 					Err(_) => {
 						eprintln!(
@@ -254,16 +240,163 @@ impl Condition {
 					Self::get_val_from_item(else_item.as_ref().unwrap(), input_line)
 				}
 			},
-			Self::IsNotEmpty(_cell) => Cow::Owned(String::from("")),
-			Self::IsNumeric(_cell) => Cow::Owned(String::from("")),
-			Self::StartesWith(_needle, _cell) => Cow::Owned(String::from("")),
-			Self::EndsWith(_needle, _cell) => Cow::Owned(String::from("")),
-			Self::Contains(_needle, _cell) => Cow::Owned(String::from("")),
-			Self::Equals(_cell_a, _cell_b) => Cow::Owned(String::from("")),
-			Self::NotEquals(_cell_a, _cell_b) => Cow::Owned(String::from("")),
-			Self::GreaterThan(_cell_a, _cell_b) => Cow::Owned(String::from("")),
-			Self::LessThan(_cell_a, _cell_b) => Cow::Owned(String::from("")),
-			Self::Modulo(_divisor, _remainder, _cell) => Cow::Owned(String::from("")),
+			Self::IsNotEmpty(cell) => {
+				let value = Self::get_val_from_item(cell, input_line);
+
+				if !value.is_empty() {
+					Self::get_val_from_item(then_item, input_line)
+				} else if else_item.is_none() {
+					Cow::Owned(String::from(""))
+				} else {
+					Self::get_val_from_item(else_item.as_ref().unwrap(), input_line)
+				}
+			},
+			Self::IsNumeric(cell) => {
+				let value = Self::get_val_from_item(cell, input_line);
+
+				match value.parse::<f64>() {
+					Ok(_) => Self::get_val_from_item(then_item, input_line),
+					Err(_) => {
+						if else_item.is_none() {
+							Cow::Owned(String::from(""))
+						} else {
+							Self::get_val_from_item(else_item.as_ref().unwrap(), input_line)
+						}
+					},
+				}
+			},
+			Self::StartesWith(needle, cell) => {
+				let value = Self::get_val_from_item(cell, input_line);
+
+				if value.starts_with(needle) {
+					Self::get_val_from_item(then_item, input_line)
+				} else if else_item.is_none() {
+					Cow::Owned(String::from(""))
+				} else {
+					Self::get_val_from_item(else_item.as_ref().unwrap(), input_line)
+				}
+			},
+			Self::EndsWith(needle, cell) => {
+				let value = Self::get_val_from_item(cell, input_line);
+
+				if value.ends_with(needle) {
+					Self::get_val_from_item(then_item, input_line)
+				} else if else_item.is_none() {
+					Cow::Owned(String::from(""))
+				} else {
+					Self::get_val_from_item(else_item.as_ref().unwrap(), input_line)
+				}
+			},
+			Self::Contains(needle, cell) => {
+				let value = Self::get_val_from_item(cell, input_line);
+
+				if value.contains(needle) {
+					Self::get_val_from_item(then_item, input_line)
+				} else if else_item.is_none() {
+					Cow::Owned(String::from(""))
+				} else {
+					Self::get_val_from_item(else_item.as_ref().unwrap(), input_line)
+				}
+			},
+			Self::Equals(cell_a, cell_b) => {
+				let value_a = Self::get_val_from_item(cell_a, input_line);
+				let value_b = Self::get_val_from_item(cell_b, input_line);
+
+				if value_a == value_b {
+					Self::get_val_from_item(then_item, input_line)
+				} else if else_item.is_none() {
+					Cow::Owned(String::from(""))
+				} else {
+					Self::get_val_from_item(else_item.as_ref().unwrap(), input_line)
+				}
+			},
+			Self::NotEquals(cell_a, cell_b) => {
+				let value_a = Self::get_val_from_item(cell_a, input_line);
+				let value_b = Self::get_val_from_item(cell_b, input_line);
+
+				if value_a != value_b {
+					Self::get_val_from_item(then_item, input_line)
+				} else if else_item.is_none() {
+					Cow::Owned(String::from(""))
+				} else {
+					Self::get_val_from_item(else_item.as_ref().unwrap(), input_line)
+				}
+			},
+			Self::GreaterThan(cell_b, cell_a) => {
+				let value_a = Self::get_val_from_item(cell_a, input_line);
+				let value_b = Self::get_val_from_item(cell_b, input_line);
+
+				let num_a = match value_a.parse::<f64>() {
+					Ok(value) => value,
+					Err(_) => {
+						eprintln!("Condition error: The GREATER_THAN filter left number cannot be parsed, was \"{value_a}\"");
+						exit_with_error(1);
+					},
+				};
+
+				let num_b = match value_b.parse::<f64>() {
+					Ok(value) => value,
+					Err(_) => {
+						eprintln!("Condition error: The GREATER_THAN filter right number cannot be parsed, was \"{value_b}\"");
+						exit_with_error(1);
+					},
+				};
+
+				if num_a > num_b {
+					Self::get_val_from_item(then_item, input_line)
+				} else if else_item.is_none() {
+					Cow::Owned(String::from(""))
+				} else {
+					Self::get_val_from_item(else_item.as_ref().unwrap(), input_line)
+				}
+			},
+			Self::LessThan(cell_b, cell_a) => {
+				let value_a = Self::get_val_from_item(cell_a, input_line);
+				let value_b = Self::get_val_from_item(cell_b, input_line);
+
+				let num_a = match value_a.parse::<f64>() {
+					Ok(value) => value,
+					Err(_) => {
+						eprintln!("Condition error: The GREATER_THAN filter left number cannot be parsed, was \"{value_a}\"");
+						exit_with_error(1);
+					},
+				};
+
+				let num_b = match value_b.parse::<f64>() {
+					Ok(value) => value,
+					Err(_) => {
+						eprintln!("Condition error: The GREATER_THAN filter right number cannot be parsed, was \"{value_b}\"");
+						exit_with_error(1);
+					},
+				};
+
+				if num_a < num_b {
+					Self::get_val_from_item(then_item, input_line)
+				} else if else_item.is_none() {
+					Cow::Owned(String::from(""))
+				} else {
+					Self::get_val_from_item(else_item.as_ref().unwrap(), input_line)
+				}
+			},
+			Self::Modulo(divisor, remainder, cell) => {
+				let value_str = Self::get_val_from_item(cell, input_line);
+
+				let int = match value_str.parse::<f64>() {
+					Ok(value) => value,
+					Err(_) => {
+						eprintln!("Condition error: The modulo filter cell number cannot be parsed, was \"{value_str}\"");
+						exit_with_error(1);
+					},
+				};
+
+				if int % divisor == *remainder {
+					Self::get_val_from_item(then_item, input_line)
+				} else if else_item.is_none() {
+					Cow::Owned(String::from(""))
+				} else {
+					Self::get_val_from_item(else_item.as_ref().unwrap(), input_line)
+				}
+			},
 		}
 	}
 }
@@ -913,6 +1046,17 @@ mod tests {
 			);
 		}
 
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> IS_EMPTY (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from(""), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
 		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> IS_EMPTY (<cell2>) ELSE (<cell3>)") {
 			assert_eq!(
 				condition.run(
@@ -940,6 +1084,40 @@ mod tests {
 			Condition::parse("<cell1> IS_NOT_EMPTY (<cell2>)"),
 			Item::If(Condition::IsNotEmpty(Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
 		);
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> IS_NOT_EMPTY (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> IS_NOT_EMPTY (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from(""), String::from("B"), String::from("C")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> IS_NOT_EMPTY (<cell2>) ELSE (<cell3>)")
+		{
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
 	}
 
 	#[test]
@@ -957,6 +1135,50 @@ mod tests {
 			Condition::parse("<cell1> IS_NUMERIC (<cell2>)"),
 			Item::If(Condition::IsNumeric(Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
 		);
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> IS_NUMERIC (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("666"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> IS_NUMERIC (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("666.42"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> IS_NUMERIC (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("-666.42"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> IS_NUMERIC (<cell2>) ELSE (<cell3>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("C")
+			);
+		}
 	}
 
 	#[test]
@@ -987,6 +1209,41 @@ mod tests {
 				None
 			)
 		);
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> STARTS_WITH|'foo' (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("foobar"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> STARTS_WITH|'foo' (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("furchtbar"), String::from("B"), String::from("C")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) =
+			Condition::parse("<cell1> STARTS_WITH|'foo' (<cell2>) ELSE (<cell3>)")
+		{
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("C")
+			);
+		}
 	}
 
 	#[test]
@@ -1017,6 +1274,41 @@ mod tests {
 				None
 			)
 		);
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> ENDS_WITH|'foo' (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("kungfoo"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> ENDS_WITH|'foo' (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("Kung Fu"), String::from("B"), String::from("C")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) =
+			Condition::parse("<cell1> ENDS_WITH|'foo' (<cell2>) ELSE (<cell3>)")
+		{
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("C")
+			);
+		}
 	}
 
 	#[test]
@@ -1038,6 +1330,41 @@ mod tests {
 				None
 			)
 		);
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> CONTAINS|'foo' (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("kungfoo"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> CONTAINS|'foo' (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("Kung Fu"), String::from("B"), String::from("C")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) =
+			Condition::parse("<cell1> CONTAINS|'foo' (<cell2>) ELSE (<cell3>)")
+		{
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("C")
+			);
+		}
 	}
 
 	#[test]
@@ -1077,6 +1404,61 @@ mod tests {
 				None
 			)
 		);
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> == A (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> == X (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> == <cell3> (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("A")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> == <cell3> (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> == X (<cell2>) ELSE (<cell3>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("C")
+			);
+		}
 	}
 
 	#[test]
@@ -1116,6 +1498,61 @@ mod tests {
 				None
 			)
 		);
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> != X (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> != A (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> != <cell3> (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> != <cell3> (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("A")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> != A (<cell2>) ELSE (<cell3>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("A"), String::from("B"), String::from("C")]
+				),
+				String::from("C")
+			);
+		}
 	}
 
 	#[test]
@@ -1123,7 +1560,7 @@ mod tests {
 		assert_eq!(
 			Condition::parse("<cell1> > 5 ('yay') ELSE (<cell2>)"),
 			Item::If(
-				Condition::GreaterThan(5, Box::new(Item::Cell(0, None))),
+				Condition::GreaterThan(Box::new(Item::Value(String::from("5"))), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("yay"))),
 				Some(Box::new(Item::Cell(1, None)))
 			)
@@ -1131,13 +1568,76 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1> > 666 (<cell2>)"),
-			Item::If(Condition::GreaterThan(666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(
+				Condition::GreaterThan(Box::new(Item::Value(String::from("666"))), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
 		);
 
 		assert_eq!(
 			Condition::parse("<cell1>  >   -666      (<cell2>)"),
-			Item::If(Condition::GreaterThan(-666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(
+				Condition::GreaterThan(Box::new(Item::Value(String::from("-666"))), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
 		);
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> > 5 (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("6"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> > 5 (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("5"), String::from("B"), String::from("C")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> > <cell3> (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("6"), String::from("B"), String::from("5")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> > <cell3> (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("5"), String::from("B"), String::from("5")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> > 5 (<cell2>) ELSE (<cell3>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("4"), String::from("B"), String::from("C")]
+				),
+				String::from("C")
+			);
+		}
 	}
 
 	#[test]
@@ -1145,7 +1645,7 @@ mod tests {
 		assert_eq!(
 			Condition::parse("<cell1> < 5 ('yay') ELSE (<cell2>)"),
 			Item::If(
-				Condition::LessThan(5, Box::new(Item::Cell(0, None))),
+				Condition::LessThan(Box::new(Item::Value(String::from("5"))), Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("yay"))),
 				Some(Box::new(Item::Cell(1, None)))
 			)
@@ -1153,13 +1653,76 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1> < 666 (<cell2>)"),
-			Item::If(Condition::LessThan(666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(
+				Condition::LessThan(Box::new(Item::Value(String::from("666"))), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
 		);
 
 		assert_eq!(
 			Condition::parse("<cell1>  <   -666      (<cell2>)"),
-			Item::If(Condition::LessThan(-666, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(
+				Condition::LessThan(Box::new(Item::Value(String::from("-666"))), Box::new(Item::Cell(0, None))),
+				Box::new(Item::Cell(1, None)),
+				None
+			)
 		);
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> < 5 (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("4"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> < 5 (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("5"), String::from("B"), String::from("C")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> < <cell3> (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("4"), String::from("B"), String::from("5")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> < <cell3> (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("5"), String::from("B"), String::from("5")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> < 5 (<cell2>) ELSE (<cell3>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("6"), String::from("B"), String::from("C")]
+				),
+				String::from("C")
+			);
+		}
 	}
 
 	#[test]
@@ -1167,7 +1730,7 @@ mod tests {
 		assert_eq!(
 			Condition::parse("<cell1> % 3 = 0 ('yay') ELSE (<cell2>)"),
 			Item::If(
-				Condition::Modulo(3, 0, Box::new(Item::Cell(0, None))),
+				Condition::Modulo(3.0, 0.0, Box::new(Item::Cell(0, None))),
 				Box::new(Item::Value(String::from("yay"))),
 				Some(Box::new(Item::Cell(1, None)))
 			)
@@ -1175,7 +1738,40 @@ mod tests {
 
 		assert_eq!(
 			Condition::parse("<cell1>  %  42   =  -20  (<cell2>)"),
-			Item::If(Condition::Modulo(42, -20, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
+			Item::If(Condition::Modulo(42.0, -20.0, Box::new(Item::Cell(0, None))), Box::new(Item::Cell(1, None)), None)
 		);
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> % 2 = 0 (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("4"), String::from("B"), String::from("C")]
+				),
+				String::from("B")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> % 2 = 0 (<cell2>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("5"), String::from("B"), String::from("C")]
+				),
+				String::from("")
+			);
+		}
+
+		if let Item::If(condition, then_item, else_item) = Condition::parse("<cell1> % 2 = 0 (<cell2>) ELSE (<cell3>)") {
+			assert_eq!(
+				condition.run(
+					&*then_item,
+					&else_item.map(|b| *b),
+					&vec![String::from("5"), String::from("B"), String::from("C")]
+				),
+				String::from("C")
+			);
+		}
 	}
 }

@@ -131,7 +131,7 @@ In this example we're splitting a single input line into two resulting in double
 
 
 TODO:
-- [ ] Add `:IF <celle1> [condition] ('') ELSE ('')` and `:IF <celle1> [condition] (<cell2>) ELSE (<cell3>)`
+- [x] Add `:IF <cell1> [condition] ('') ELSE ('')` and `:IF <cell1> [condition] (<cell2>) ELSE (<cell3>)`
   - [x] Support `:IF <cell1> IS_EMPTY` => `Condition::IsEmpty(Box<Item>)`
   - [x] Support `:IF <cell1> IS_NOT_EMPTY` => `Condition::IsNotEmpty(Box<Item>)`
   - [x] Support `:IF <cell1> IS_NUMERIC` => `Condition::IsNumeric(Box<Item>)`
