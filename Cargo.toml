@@ -15,9 +15,6 @@ keywords = [
 	"transform",
 	"export",
 	"cli",
-	"matrixify",
-	"shopify",
-	"twp",
 ]
 
 [dependencies]
