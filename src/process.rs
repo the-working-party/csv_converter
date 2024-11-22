@@ -31,7 +31,7 @@ pub fn run(input_line: &Vec<String>, output_config: &OutputConfig) -> Vec<Vec<St
 				Item::If(condition, then_item, else_item) => {
 					let condition_result =
 						condition.run(then_item, &else_item.as_ref().map(|b| (**b).clone()), input_line).to_string();
-					if &condition_result == "SKIP_LINE" {
+					if &condition_result == "SKIP_THIS_LINE" {
 						skip_line = true;
 					}
 					line.push(condition_result)
@@ -144,7 +144,7 @@ mod tests {
 					String::from("C"),
 					String::from("D")
 				],
-				&OutputConfig::new(CsvParser::new(Cursor::new("Column A,Column B,Column C\n<cell1>,MERGE,<cell2>\n<cell1>,NEW,:IF <cell3> == 'D' ('SKIP_LINE') ELSE (<cell3>)\n<cell1>,NEW,:IF <cell4> == 'D' ('SKIP_LINE') ELSE (<cell4>)\n"))),
+				&OutputConfig::new(CsvParser::new(Cursor::new("Column A,Column B,Column C\n<cell1>,MERGE,<cell2>\n<cell1>,NEW,:IF <cell3> == 'D' ('SKIP_THIS_LINE') ELSE (<cell3>)\n<cell1>,NEW,:IF <cell4> == 'D' ('SKIP_THIS_LINE') ELSE (<cell4>)\n"))),
 			),
 			vec![
 				vec![String::from("A"), String::from("MERGE"), String::from("B")],

@@ -160,7 +160,7 @@ Syntax: `:IF <cell1> [condition] ('then-item') [ELSE ('else-item')]`
 - The `ELSE` clause is optional
 - A `then-item` can be a String or a cell: `:IF <cell1> [condition] ('then-item')` or `:IF <cell1> [condition] (<cell2>)`
 
-_(💡  You can also use it to skip an entire line by adding the `SKIP_LINE` into the `then-item` or `else-item`)_
+_(💡  If any of your conditions evaluate to `SKIP_THIS_LINE` then the entire line won't be exported in the output)_
 
 TODO: add docs for:
 - [ ] `IS_EMPTY`
