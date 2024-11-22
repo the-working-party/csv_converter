@@ -77,6 +77,7 @@ Each line from you input CSV file will be processed via this config.
 
 <details>
 <summary>Show more</summary>
+
 ```
    ┌────────────────────────────────────────────────────────────┐
    │                         Input.csv                          │
