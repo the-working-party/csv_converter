@@ -1,15 +1,50 @@
+//! This module handles:
+//! - Parsing CLI arguments
+//! - A function to display help
+//! - A function to display color in the terminal
+//! - A function to handle exiting with the right error code
 use CliColor::*;
 
+/// The [Settings] struct is the code representation of your CI arguments
 #[derive(Debug, Default, PartialEq)]
 pub struct Settings {
+	/// The path for the input file
 	pub input: String,
+	/// The path for the output file
 	pub output: String,
+	/// The path for the config file
 	pub output_config: String,
+	/// A boolean flag to show the version
 	pub version: bool,
+	/// A boolean flag to show the help
 	pub help: bool,
 }
 
 impl Settings {
+	/// This function parses the CLI arguments into our [Settings] struct.
+	/// Pass in the args from env: `Settings::new(env::args().skip(1).collect());`
+	///
+	/// ```rust
+	/// use csv_converter::cli::Settings;
+	///
+	/// assert_eq!(
+	///     Settings::new(vec![
+	///         String::from("-i"),
+	///         String::from("input_file.csv"),
+	///         String::from("-o"),
+	///         String::from("output_file.csv"),
+	///         String::from("-c"),
+	///         String::from("config_file.csv"),
+	///     ]),
+	///     Settings {
+	///         input: String::from("input_file.csv"),
+	///         output: String::from("output_file.csv"),
+	///         output_config: String::from("config_file.csv"),
+	///         version: false,
+	///         help: false,
+	///     }
+	/// );
+	/// ```
 	pub fn new(args: Vec<String>) -> Self {
 		let mut settings: Settings = Default::default();
 
@@ -19,11 +54,7 @@ impl Settings {
 				"-i" | "--input" => {
 					let item = args_iter.next();
 					if item.is_none() {
-						exit_with_error(
-							Some(format!("CLI arguments: Expected an argument after \"{arg}\"")),
-							Some(ErrorStages::Cli),
-							1,
-						);
+						exit_with_error(Some(format!("Expected an argument after \"{arg}\"")), Some(ErrorStages::Cli), 1);
 					} else {
 						settings.input = item.unwrap();
 					}
@@ -31,11 +62,7 @@ impl Settings {
 				"-o" | "--output" => {
 					let item = args_iter.next();
 					if item.is_none() {
-						exit_with_error(
-							Some(format!("CLI arguments: Expected an argument after \"{arg}\"")),
-							Some(ErrorStages::Cli),
-							1,
-						);
+						exit_with_error(Some(format!("Expected an argument after \"{arg}\"")), Some(ErrorStages::Cli), 1);
 					} else {
 						settings.output = item.unwrap();
 					}
@@ -43,11 +70,7 @@ impl Settings {
 				"-c" | "--config" => {
 					let item = args_iter.next();
 					if item.is_none() {
-						exit_with_error(
-							Some(format!("CLI arguments: Expected an argument after \"{arg}\"")),
-							Some(ErrorStages::Cli),
-							1,
-						);
+						exit_with_error(Some(format!("Expected an argument after \"{arg}\"")), Some(ErrorStages::Cli), 1);
 					} else {
 						settings.output_config = item.unwrap();
 					}
@@ -63,27 +86,15 @@ impl Settings {
 		}
 
 		if settings.input.is_empty() && !settings.version && !settings.help {
-			exit_with_error(
-				Some(format!("CLI arguments: Missing parameter  \"input\"\n{}", usage())),
-				Some(ErrorStages::Cli),
-				1,
-			);
+			exit_with_error(Some(format!("Missing parameter  \"input\"\n{}", usage())), Some(ErrorStages::Cli), 1);
 		}
 
 		if settings.output.is_empty() && !settings.version && !settings.help {
-			exit_with_error(
-				Some(format!("CLI arguments: Missing parameter  \"output\"\n{}", usage())),
-				Some(ErrorStages::Cli),
-				1,
-			);
+			exit_with_error(Some(format!("Missing parameter  \"output\"\n{}", usage())), Some(ErrorStages::Cli), 1);
 		}
 
 		if settings.output_config.is_empty() && !settings.version && !settings.help {
-			exit_with_error(
-				Some(format!("CLI arguments: Missing parameter  \"config\"\n{}", usage())),
-				Some(ErrorStages::Cli),
-				1,
-			);
+			exit_with_error(Some(format!("Missing parameter  \"config\"\n{}", usage())), Some(ErrorStages::Cli), 1);
 		}
 
 		settings
@@ -198,12 +209,13 @@ mod tests {
 	}
 }
 
+/// This is a simple function to display the help within the terminal
 pub fn help() -> String {
 	format!(
 		r#"
- █▀▀ █▀▀ █ █   ▀█▀ █▀█   █▀▄▀█ ▄▀█ ▀█▀ █▀█ █ ▀▄▀ █ █▀▀ █▄█
- █▄▄ ▄▄█ ▀▄▀    █  █▄█   █ ▀ █ █▀█  █  █▀▄ █ █ █ █ █▀   █
-A tool to build a matrixify compatible CSV
+{YellowBright } █▀▀ █▀▀ █ █   █▀▀ █▀█ █▄ █ █ █ █▀▀ █▀█ ▀█▀ █▀▀ █▀█{Reset}
+{MagentaBright} █▄▄ ▄▄█ ▀▄▀   █▄▄ █▄█ █ ▀█ ▀▄▀ ██▄ █▀▄  █  ██▄ █▀▄{Reset}
+ A tool to convert a CSV file into a new format
 {}"#,
 		usage()
 	)
@@ -229,16 +241,25 @@ Options:
 	)
 }
 
+/// The stages of errors possible
 pub enum ErrorStages {
+	/// Error in the CLI module
 	Cli,
+	/// Error in the config parser
 	ConfigParsing,
+	/// Error in the config parser while parsing conditions
 	ConfigConditionParsing,
+	/// Error in the config parser while evaluating conditions
 	ConfigConditionEvaluating,
+	/// Error in the config parser while parsing filters
 	ConfigFilterParsing,
+	/// Error in the process module
 	Process,
+	/// Errors while ding I/O
 	Io,
 }
 
+/// Handle exist gracefully and display a nice message
 pub fn exit_with_error(error: Option<String>, stage: Option<ErrorStages>, code: i32) -> ! {
 	if error.is_some() && stage.is_some() {
 		let prefix = match stage.unwrap() {
@@ -266,6 +287,15 @@ pub fn exit_with_error(error: Option<String>, stage: Option<ErrorStages>, code: 
 	}
 }
 
+/// Terminal color ANSI codes
+/// ```rust
+/// use csv_converter::cli::CliColor::*;
+///
+/// assert_eq!(
+///     format!("{Red}Hello World{Reset}"),
+///     String::from("\x1b[31mHello World\x1b[39m"),
+/// );
+/// ```
 #[allow(dead_code)]
 pub enum CliColor {
 	System,

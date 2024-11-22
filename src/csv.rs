@@ -1,14 +1,29 @@
+//! This module handles the parsing of any CSV file
 use std::io::BufRead;
 
+/// A struct that we use to read through very large CSV files line by line to avoid loading the entire file into memory
+///
+/// ```rust
+/// use csv_converter::csv::CsvParser;
+/// use std::{io::BufReader, fs::File};
+///
+/// let reader = BufReader::new(File::open("tests/input.csv").unwrap());
+/// let mut csv_file = CsvParser::new(reader);
+/// while let Some(row) = csv_file.next() {
+///     // row is the Vec<String> for a single row in the CSV file
+/// }
+/// ```
 pub struct CsvParser<R: BufRead> {
 	reader: R,
 	buffer: String,
 	temp_line: String,
 	in_quotes: bool,
+	/// We keep track of how much we have read so far for progress calculations
 	pub bytes_read: u128,
 }
 
 impl<R: BufRead> CsvParser<R> {
+	/// Simple instantiation without logic
 	pub fn new(reader: R) -> Self {
 		Self {
 			reader,
@@ -19,7 +34,7 @@ impl<R: BufRead> CsvParser<R> {
 		}
 	}
 
-	pub fn parse_csv_line(&self) -> Vec<String> {
+	fn parse_csv_line(&self) -> Vec<String> {
 		let mut cell = String::new();
 		let mut in_quotes = false;
 		let mut chars = self.buffer.chars().peekable();
@@ -51,6 +66,7 @@ impl<R: BufRead> CsvParser<R> {
 	}
 }
 
+/// Convert a two dimensional collection of Strings into a CSV compatible String
 pub fn export(records: &[Vec<String>], output: &mut String) {
 	output.clear();
 	for line in records {

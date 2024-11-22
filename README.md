@@ -1,12 +1,12 @@
 ```
-█▀▀ █▀▀ █ █   ▀█▀ █▀█   █▀▄▀█ ▄▀█ ▀█▀ █▀█ █ ▀▄▀ █ █▀▀ █▄█
-█▄▄ ▄▄█ ▀▄▀    █  █▄█   █ ▀ █ █▀█  █  █▀▄ █ █ █ █ █▀   █
+ █▀▀ █▀▀ █ █   █▀▀ █▀█ █▄ █ █ █ █▀▀ █▀█ ▀█▀ █▀▀ █▀█
+ █▄▄ ▄▄█ ▀▄▀   █▄▄ █▄█ █ ▀█ ▀▄▀ ██▄ █▀▄  █  ██▄ █▀▄
 ```
-A tool to build a matrixify compatible CSV
+A tool to convert a CSV file into a new format
 
 ## Description
 
-`csv2matrixify` is a Rust-based CLI application designed to convert CSV files into a format compatible with
+`csv_converter` is a Rust-based CLI application designed to convert CSV files into a format compatible with
 [Matrixify](https://matrixify.app/), a powerful import/export app for Shopify stores.
 This tool streamlines the process of preparing bulk data for Shopify, making it easier to manage large inventories.
 
@@ -49,7 +49,7 @@ berta2,MERGE,,,,MERGE,Material,toxic
 
 You have to split off each line into two and make sure you select the right items with the right headlines.
 
-With `csv2matrixify` you can do this by creating a config spreadsheet like this:
+With `csv_converter` you can do this by creating a config spreadsheet like this:
 ![The config csv](assets/config.png)
 <details>
 <summary>View the code</summary>
@@ -179,7 +179,7 @@ TODO: add docs for:
 ## CLI Usage
 
 ```sh
-csv2matrixify [OPTIONS]
+csv_converter [OPTIONS]
 
 Options:
   -i <file>, --input <file>
@@ -197,7 +197,7 @@ Options:
 Example command:
 
 ```sh
-csv2matrixify -i input.csv -o output.csv -c config.csv
+csv_converter -i input.csv -o output.csv -c config.csv
 ```
 
 ## Installation
@@ -210,25 +210,25 @@ You can download it from [rust-lang.org](https://www.rust-lang.org/tools/install
 #### Install via cargo
 
 ```sh
-cargo install csv2matrixify
+cargo install csv_converter
 ```
 
 #### Build from Source
 
 ```sh
-git clone https://github.com/the-working-party/csv2matrixify.git
-cd csv2matrixify
+git clone https://github.com/the-working-party/csv_converter.git
+cd csv_converter
 cargo build --release
-# Now run the app via "cargo run --release" instead of "csv2matrixify" or locate the binary in your target folder
+# Now run the app via "cargo run --release" instead of "csv_converter" or locate the binary in your target folder
 ```
 
 ## Contributing
 
 Contributions are welcome.
-Please [open an issue](https://github.com/the-working-party/csv2matrixify/issues/new) or
-[submit a pull request](https://github.com/the-working-party/csv2matrixify/compare) on the
-[GitHub repository](https://github.com/the-working-party/csv2matrixify) to contribute to this project.
+Please [open an issue](https://github.com/the-working-party/csv_converter/issues/new) or
+[submit a pull request](https://github.com/the-working-party/csv_converter/compare) on the
+[GitHub repository](https://github.com/the-working-party/csv_converter) to contribute to this project.
 
 ## Licensing
 Copyleft (c) 2024
-Licensed under [MIT](https://raw.githubusercontent.com/the-working-party/csv2matrixify/refs/heads/main/LICENSE?token=GHSAT0AAAAAABO36GVRGUHXFAY4O4AZ6BAQZZSUEGA).
+Licensed under [MIT](https://raw.githubusercontent.com/the-working-party/csv_converter/refs/heads/main/LICENSE?token=GHSAT0AAAAAABO36GVRGUHXFAY4O4AZ6BAQZZSUEGA).

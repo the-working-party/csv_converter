@@ -11,7 +11,7 @@ mod csv;
 mod process;
 
 use crate::{
-	cli::{exit_with_error, help, ErrorStages, Settings},
+	cli::{exit_with_error, help, CliColor::*, ErrorStages, Settings},
 	config::OutputConfig,
 	csv::CsvParser,
 };
@@ -38,7 +38,7 @@ fn main() {
 		},
 		Err(error) => {
 			exit_with_error(
-				Some(format!("Could not open output config \"{}\": \"{error}\"", settings.output)),
+				Some(format!("Could not open output config \"{}\": \"{Red}{error}{Reset}\"", settings.output)),
 				Some(ErrorStages::Io),
 				1,
 			);
@@ -49,7 +49,7 @@ fn main() {
 		Ok(file) => file,
 		Err(error) => {
 			exit_with_error(
-				Some(format!("Error: Could not open input file \"{}\": \"{error}\"", settings.output)),
+				Some(format!("Could not open input file \"{}\": \"{Red}{error}{Reset}\"", settings.output)),
 				Some(ErrorStages::Io),
 				1,
 			);
@@ -59,7 +59,7 @@ fn main() {
 		Ok(metadata) => metadata.len(),
 		Err(error) => {
 			exit_with_error(
-				Some(format!("Error: Could not get metadata for input file \"{}\": \"{error}\"", settings.output)),
+				Some(format!("Could not get metadata for input file \"{}\": \"{Red}{error}{Reset}\"", settings.output)),
 				Some(ErrorStages::Io),
 				1,
 			);
@@ -71,7 +71,7 @@ fn main() {
 		Ok(file) => file,
 		Err(error) => {
 			exit_with_error(
-				Some(format!("Error: Could not create output file \"{}\": \"{error}\"", settings.output)),
+				Some(format!("Could not create output file \"{}\": \"{Red}{error}{Reset}\"", settings.output)),
 				Some(ErrorStages::Io),
 				1,
 			);
@@ -95,7 +95,11 @@ fn main() {
 		};
 
 		if let Err(error) = writer.write_all(output.as_bytes()) {
-			exit_with_error(Some(format!("Error: Failed to write to output file: \"{error}\"")), Some(ErrorStages::Io), 1);
+			exit_with_error(
+				Some(format!("Failed to write to output file: \"{Red}{error}{Reset}\"")),
+				Some(ErrorStages::Io),
+				1,
+			);
 		}
 
 		if last_report_time.elapsed() >= Duration::from_secs(1) {
@@ -107,8 +111,8 @@ fn main() {
 	print!("\x1b[1A\x1b[0G");
 
 	if let Err(error) = writer.flush() {
-		exit_with_error(Some(format!("Error: Failed to flush output file: \"{error}\"")), Some(ErrorStages::Io), 1);
+		exit_with_error(Some(format!("Failed to flush output file: \"{Red}{error}{Reset}\"")), Some(ErrorStages::Io), 1);
 	} else {
-		println!("File successfully written to {:?}\nTime: {:#?}", settings.output, time.elapsed())
+		println!("File successfully written to \"{GreenBright}{}{Reset}\"\nTime: {:#?}", settings.output, time.elapsed())
 	}
 }

@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "csv2matrixify"
+name = "csv_converter"
 version = "1.0.0"

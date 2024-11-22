@@ -3,7 +3,7 @@ use std::path::Path;
 use std::process::Command;
 
 #[test]
-fn test_csv2matrixify_end_to_end() {
+fn test_csv_converter_end_to_end() {
 	let input_file = "tests/input.csv";
 	let output_file = "tests/output.csv";
 	let config_file = "tests/config.csv";
@@ -13,7 +13,7 @@ fn test_csv2matrixify_end_to_end() {
 		fs::remove_file(output_file).expect("Failed to remove old output file");
 	}
 
-	let output = Command::new(env!("CARGO_BIN_EXE_csv2matrixify"))
+	let output = Command::new(env!("CARGO_BIN_EXE_csv_converter"))
 		.arg("-i")
 		.arg(input_file)
 		.arg("-o")
@@ -21,11 +21,11 @@ fn test_csv2matrixify_end_to_end() {
 		.arg("-c")
 		.arg(config_file)
 		.output()
-		.expect("Failed to execute csv2matrixify");
+		.expect("Failed to execute csv_converter");
 
 	assert!(
 		output.status.success(),
-		"csv2matrixify did not run successfully: {}",
+		"csv_converter did not run successfully: {}",
 		String::from_utf8_lossy(&output.stderr)
 	);
 

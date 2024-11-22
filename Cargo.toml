@@ -1,5 +1,5 @@
 [package]
-name = "csv2matrixify"
+name = "csv_converter"
 version = "1.0.0"
 edition = "2021"
 authors = [
@@ -7,9 +7,13 @@ authors = [
 ]
 license = "GPL-3.0-or-later"
 description = "A vault GUI for your offline passwords"
-homepage = "https://github.com/the-working-party/csv2matrixify"
-repository = "https://github.com/the-working-party/csv2matrixify"
+homepage = "https://github.com/the-working-party/csv_converter"
+repository = "https://github.com/the-working-party/csv_converter"
 keywords = [
+	"csv",
+	"convert",
+	"transform",
+	"export",
 	"cli",
 	"matrixify",
 	"shopify",

@@ -5,6 +5,7 @@ use crate::{
 	config::{Item, OutputConfig},
 };
 
+/// This function takes the [OutputConfig] and applies it to the input file line by line
 pub fn run(input_line: &[String], output_config: &OutputConfig) -> Vec<Vec<String>> {
 	let mut new_lines = Vec::new();
 	let mut skip_line = false;

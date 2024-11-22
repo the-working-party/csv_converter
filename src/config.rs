@@ -1,3 +1,4 @@
+//! This module handles the parsing of the config CSV file
 use std::{borrow::Cow, io::BufRead};
 
 use crate::{
@@ -5,22 +6,39 @@ use crate::{
 	csv::{self, CsvParser},
 };
 
+/// Conditions within the config file
+///
+/// Syntax: `:IF <cell1> [condition] ('then-item') [ELSE ('else-item')]`
 #[derive(Debug, PartialEq, Clone)]
 pub enum Condition {
+	/// The CSV cell would contain: `:IF <cell1> IS_EMPTY (<cell2>)` to be parsed as this condition
 	IsEmpty(Box<Item>),
+	/// The CSV cell would contain: `:IF <cell1> IS_NOT_EMPTY (<cell2>)` to be parsed as this condition
 	IsNotEmpty(Box<Item>),
+	/// The CSV cell would contain: `:IF <cell1> IS_NUMERIC (<cell2>)` to be parsed as this condition
 	IsNumeric(Box<Item>),
+	/// The CSV cell would contain: `:IF <cell1> STARTS_WITH|'start' (<cell2>)` to be parsed as this condition
 	StartesWith(String, Box<Item>),
+	/// The CSV cell would contain: `:IF <cell1> ENDS_WITH|'end' (<cell2>)` to be parsed as this condition
 	EndsWith(String, Box<Item>),
+	/// The CSV cell would contain: `:IF <cell1> CONTAINS|'middle' (<cell2>)` to be parsed as this condition
 	Contains(String, Box<Item>),
+	/// The CSV cell would contain: `:IF <cell1> == 'needle' (<cell2>)` to be parsed as this condition
 	Equals(Box<Item>, Box<Item>),
+	/// The CSV cell would contain: `:IF <cell1> != 'needle' (<cell2>)` to be parsed as this condition
 	NotEquals(Box<Item>, Box<Item>),
+	/// The CSV cell would contain: `:IF <cell1> > 42 (<cell2>)` to be parsed as this condition
 	GreaterThan(Box<Item>, Box<Item>),
+	/// The CSV cell would contain: `:IF <cell1> < 42 (<cell2>)` to be parsed as this condition
 	LessThan(Box<Item>, Box<Item>),
+	/// The CSV cell would contain: `:IF <cell1> % 2 = 0 (<cell2>)` to be parsed as this condition
 	Modulo(f64, f64, Box<Item>),
 }
 
 impl Condition {
+	/// The parser for conditions.
+	///
+	/// Note: that the condition_str argument already has its `:IF ` prefix stripped before being passed into this function
 	pub fn parse(condition_str: &str) -> Item {
 		let usage = "\n\
 		The syntax of an IF condition is: :IF <cell[x]> [condition] ([then-item]) [ELSE ([else-item])]\n\
@@ -253,6 +271,7 @@ impl Condition {
 		}
 	}
 
+	/// The function to apply the condition to a row.
 	pub fn run<'a>(&self, then_item: &Item, else_item: &Option<Item>, input_line: &[String]) -> Cow<'a, str> {
 		match self {
 			Self::IsEmpty(cell) => {
@@ -442,22 +461,39 @@ impl Condition {
 	}
 }
 
+/// Filters within the config file
+///
+/// Syntax: `<cell1 [Filter]>`
 #[derive(Debug, PartialEq, Clone)]
 pub enum Filter {
+	/// The CSV cell would contain a cell like this: `<cell1 UPPER_CASE>`
 	UpperCase,
+	/// The CSV cell would contain a cell like this: `<cell1 LOWER_CASE>`
 	LowerCase,
+	/// The CSV cell would contain a cell like this: `<cell1 LENGTH>`
 	Length,
+	/// The CSV cell would contain a cell like this: `<cell1 TRIM>`
 	Trim,
+	/// The CSV cell would contain a cell like this: `<cell1 TRIM_START>`
 	TrimStart,
+	/// The CSV cell would contain a cell like this: `<cell1 TRIM_END>`
 	TrimEnd,
+	/// The CSV cell would contain a cell like this: `<cell1 REPLACE|'red'|'blue'>`
 	Replace(String, String),
+	/// The CSV cell would contain a cell like this: `<cell1 APPEND|'back'>`
 	Append(String),
+	/// The CSV cell would contain a cell like this: `<cell1 PREPEND|'front'>`
 	Prepend(String),
+	/// The CSV cell would contain a cell like this: `<cell1 SPLIT|'-'|2>`
 	Split(String, usize),
+	/// The CSV cell would contain a cell like this: `<cell1 SUB_STRING|3>` or `<cell1 SUB_STRING|3|2>`
 	SubString(usize, Option<usize>),
 }
 
 impl Filter {
+	/// The parser for filters.
+	///
+	/// Note: that the filter_str argument already has its `<cellx ` prefix stripped before being passed into this function
 	pub fn parse(filter_str: &str) -> Vec<Self> {
 		let mut in_quotes = false;
 		let mut escaped = false;
@@ -640,6 +676,7 @@ impl Filter {
 		filters
 	}
 
+	/// The function to apply the filter to a cell.
 	pub fn run<'a>(&self, input: Cow<'a, str>) -> Cow<'a, str> {
 		match self {
 			Self::UpperCase => Cow::Owned(input.to_uppercase()),
@@ -684,14 +721,19 @@ impl Filter {
 	}
 }
 
+/// The type of things we may find within a config CSV file
 #[derive(Debug, PartialEq, Clone)]
 pub enum Item {
+	/// A hardcoded value which would look like this in the CSV: `Hello`
 	Value(String),
+	/// A condition which would look like this in the CSV: `:IF <cell1> IS_EMPTY (<cell2)`
 	If(Condition, Box<Item>, Option<Box<Item>>),
+	/// A cell reference which would look like this in the CSV: `<cell1>`
 	Cell(usize, Option<Vec<Filter>>),
 }
 
 impl Item {
+	/// The parser for each item within a config CSV file row
 	pub fn parse(input: String) -> Self {
 		if input.starts_with("<cell") && input.ends_with('>') {
 			let cell_str = &input[5..input.len() - 1];
@@ -728,13 +770,17 @@ impl Item {
 	}
 }
 
+/// This is where we hold our config for this application
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct OutputConfig {
+	/// The string for the heading and the columns
 	pub heading: String,
+	/// The lines with all their filters and conditions
 	pub lines: Vec<Vec<Item>>,
 }
 
 impl OutputConfig {
+	/// This function takes a [CsvParser] and uses this to read the contents of the file
 	pub fn new<R: BufRead>(config_file: CsvParser<R>) -> Self {
 		let mut heading = String::new();
 		let mut is_heading = true;
