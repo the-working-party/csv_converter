@@ -144,18 +144,55 @@ Filters allow you to make changes to the content of a cell.
 
 Syntax: `<cell[n] FILTER|'argument'|[number]>`
 
-TODO: add docs for:
-- [ ] `UPPER_CASE`
-- [ ] `LOWER_CASE`
-- [ ] `SPLIT|','|1`
-- [ ] `SUB_STRING|10|5`
-- [ ] `REPLACE|' '|'-'`
-- [ ] `APPEND|'-end'`
-- [ ] `PREPEND|'pre-'`
-- [ ] `LENGTH`
-- [ ] `TRIM`
-- [ ] `TRIM_START`
-- [ ] `TRIM_END`
+_(💡  You can combine filters simply by adding them: `<cell1 TRIM APPEND|'!!!' UPPER_CASE>` which will give us this: `HELLO WORLD!!!`)_
+
+For the below documentation we assume `<cell1>` has the value `  Hello World  `
+
+#### `UPPER_CASE`
+Convert the contents of a cell into upper case.
+- `<cell1 UPPER_CASE>` => `  HELLO WORLD  `
+
+#### `LOWER_CASE`
+Convert the contents of a cell into lower case.
+- `<cell1 LOWER_CASE>` => `  hello world  `
+
+#### `LENGTH`
+Convert the contents of a cell into the number of characters it contains.
+- `<cell1 LENGTH>` => `15`
+
+#### `TRIM`
+Removes whitespace from both ends of the cell.
+- `<cell1 TRIM>` => `Hello World`
+
+#### `TRIM_START`
+Removes whitespace from the start of the cell.
+- `<cell1 TRIM_START>` => `Hello World  `
+
+#### `TRIM_END`
+Removes whitespace from the end of the cell.
+- `<cell1 TRIM_END>` => `  Hello World`
+
+#### `REPLACE|' '|'-'`
+Replaces something of the cell with something else.
+- `<cell1 REPLACE|'World'|'Everyone'>` => `  Hello Everyone  `
+
+#### `APPEND|'-end'`
+Adds something to the end of the cell.
+- `<cell1 APPEND|'!!!'>` => `  Hello World  !!!`
+
+#### `PREPEND|'pre-'`
+Adds something to the start of the cell.
+- `<cell1 PREPEND|':)'>` => `:)  Hello World  `
+
+#### `SPLIT|','|1`
+Splits the cell everytime it finds the string you pass in and allows you to select which of the resulting bits you want to show.
+- `<cell1 SPLIT|'o'|1>` => ` W`
+
+#### `SUB_STRING|10|5`
+Returns only a part of the cell by you defining the start and optionally the end.
+If the end is not given the rest of the cell will be returned.
+- `<cell1 SUB_STRING|1>` => `Hello World  `
+- `<cell1 SUB_STRING|1|5>` => `  Hello World  `
 
 ## Conditions
 
@@ -165,22 +202,53 @@ Syntax: `:IF <cell1> [condition] ('then-item') [ELSE ('else-item')]`
 
 - The `ELSE` clause is optional
 - A `then-item` can be a String or a cell: `:IF <cell1> [condition] ('then-item')` or `:IF <cell1> [condition] (<cell2>)`
+- All cells inside a condtion support all filters
 
 _(💡  If any of your conditions evaluate to `SKIP_THIS_LINE` then the entire line won't be exported in the output)_
 
-TODO: add docs for:
-- [ ] `IS_EMPTY`
-- [ ] `IS_NOT_EMPTY`
-- [ ] `IS_NUMERIC`
-- [ ] `STARTS_WITH|'beginning'`
-- [ ] `ENDS_WITH|'end'`
-- [ ] `CONTAINS|'happieness'`
-- [ ] `CONTAINS 'happy','`
-- [ ] `== 'this item`
-- [ ] `!= 'this item`
-- [ ] `> 42`
-- [ ] `< 42`
-- [ ] `% 2 = 0`
+#### `IS_EMPTY`
+Checks if the cell is empty.
+- `:IF <cell1> IS_EMPTY (<cell2>)`
+
+#### `IS_NOT_EMPTY`
+Checks if the cell is not empty.
+- `:IF <cell1> IS_NOT_EMPTY (<cell2>)`
+
+#### `IS_NUMERIC`
+Checks if the cell is a number.
+- `:IF <cell1> IS_NUMERIC (<cell2>)`
+
+#### `STARTS_WITH|'beginning'`
+Checks if the cell starts with a given string.
+- `:IF <cell1> STARTS_WITH|'beginning' (<cell2>)`
+
+#### `ENDS_WITH|'end'`
+Checks if the cell ends with a given string.
+- `:IF <cell1> ENDS_WITH|'end' (<cell2>)`
+
+#### `CONTAINS|'happieness'`
+Checks if the cell contains a given string.
+- `:IF <cell1> CONTAINS|'happieness' (<cell2>)`
+
+#### `== 'this item`
+Checks if the cell is equal to a given string.
+- `:IF <cell1> == 'Same?' (<cell2>)`
+
+#### `!= 'this item`
+Checks if the cell is not equal to a given string.
+- `:IF <cell1> != 'Not the Same?' (<cell2>)`
+
+#### `> 42`
+Checks if the cell is greater than a given number.
+- `:IF <cell1> > 42 (<cell2>)`
+
+#### `< 42`
+Checks if the cell is less than a given number.
+- `:IF <cell1> <> 42 (<cell2>)`
+
+#### `% 2 = 0`
+Checks if the cell, when divided by a given number, leaves a remainder equal to a given value.
+- `:IF <cell1> % 2 = 0 (<cell2>)`
 
 ## CLI Usage
 

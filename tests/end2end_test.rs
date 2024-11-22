@@ -31,8 +31,9 @@ fn test_csv_converter_end_to_end() {
 
 	assert!(Path::new(output_file).exists(), "Output file was not created");
 
-	let actual_output = fs::read_to_string(output_file).expect("Failed to read the output file").replace("\r\n", "\n");
-	let expected_output = fs::read_to_string(expected_output_file).expect("Failed to read the expected output file");
+	let actual_output = fs::read_to_string(output_file).expect("Failed to read the output file");
+	let expected_output =
+		fs::read_to_string(expected_output_file).expect("Failed to read the expected output file").replace("\r\n", "\n");
 
 	assert_eq!(actual_output, expected_output, "The output does not match the expected output");
 }
