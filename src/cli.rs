@@ -232,7 +232,7 @@ Options:
   -o <file>, --output <file>
         Specify the output file to write results to.
   -c <file>, --config <file>
-        Specify the config file to determin what the output format is.
+        Specify the config file to determine what the output format is.
   -v, -V, --version
         Display the program's version information.
   -h, --help

@@ -12,22 +12,22 @@ A tool to convert a CSV file into a new format
 
 ## Description
 
-`csv_converter` is a Rust-based CLI application designed to convert CSV files into a format compatible with
-[Matrixify](https://matrixify.app/), a powerful import/export app for Shopify stores.
-This tool streamlines the process of preparing bulk data for Shopify, making it easier to manage large inventories.
+`csv_converter` is a Rust-based CLI application designed to convert CSV files into any format you want driven by a powerful config.
+At [The Working Party](https://theworkingparty.com.au/) we use this tool to streamline the process of preparing bulk product data for Shopify imports,
+making it easier to import massive inventories.
 
 ## Features
 
-- **Easy Conversion**: Transform standard CSV files into Matrixify-compatible CSVs with a config file easily written with any spreadsheet processor.
+- **Easy Conversion**: Transform standard CSV files into a CSVs layout you need with a config file easily written with any spreadsheet processor.
 - **Fast Processing**: Leverages Rust's performance to handle *very* large files efficiently.
 - **No dependencies**: This app uses no external crates.
 
 ## How does it work?
 
 Imagine you scrape a website with your favorite scraper and now have this huge spreadsheet with a lot of data.
-![The input csv](assets/input.png)
+![The input CSV](assets/input.png)
 <details>
-<summary>View the code</summary>
+<summary>View the raw CSV</summary>
 
 ```csv
 URL,name,image1,image2,image3,SKU,description,data1,data2,variant1,variant2
@@ -39,10 +39,10 @@ https://myshop.tld/product/susan-organic,Susan,https://cdn.myshop.tld/img1.jpg,h
 These spreadsheet can be very large and contain many cells that you may not even need.
 Others need to be reshuffled or split into it's own line etc.
 
-A good matrixify spreadsheet for the above data could be this sheet:
-![The output csv](assets/output.png)
+A good spreadsheet for the above data could be this sheet:
+![The output CSV](assets/output.png)
 <details>
-<summary>View the code</summary>
+<summary>View the raw CSV</summary>
 
 ```csv
 Handle,Command,Name,Description,Variant ID,Variant Command,Option1 Name,Option1 Value
@@ -56,9 +56,9 @@ berta2,MERGE,,,,MERGE,Material,toxic
 You have to split off each line into two and make sure you select the right items with the right headlines.
 
 With `csv_converter` you can do this by creating a config spreadsheet like this:
-![The config csv](assets/config.png)
+![The config CSV](assets/config.png)
 <details>
-<summary>View the code</summary>
+<summary>View the raw CSV</summary>
 
 ```csv
 Handle,Command,Name,Description,Variant ID,Variant Command,Option1 Name,Option1 Value
@@ -73,8 +73,10 @@ No changes will be made to it.
 All lines after are free for you to allocate.
 You reference cells by using the `<cell[x]>` token.
 The reference is pointing to a single line from your import.
-Each line from you input csv file will be processed via this config.
+Each line from you input CSV file will be processed via this config.
 
+<details>
+<summary>Show more</summary>
 ```
    ┌────────────────────────────────────────────────────────────┐
    │                         Input.csv                          │
@@ -132,6 +134,7 @@ Each line from you input csv file will be processed via this config.
 ```
 
 In this example we're splitting a single input line into two resulting in double the lines in our output file.
+</details>
 
 
 ## Config reference
@@ -185,7 +188,7 @@ Adds something to the start of the cell.
 - `<cell1 PREPEND|':)'>` => `:)  Hello World  `
 
 #### `SPLIT|','|1`
-Splits the cell everytime it finds the string you pass in and allows you to select which of the resulting bits you want to show.
+Splits the cell every time it finds the string you pass in and allows you to select which of the resulting bits you want to show.
 - `<cell1 SPLIT|'o'|1>` => ` W`
 
 #### `SUB_STRING|10|5`
@@ -202,7 +205,7 @@ Syntax: `:IF <cell1> [condition] ('then-item') [ELSE ('else-item')]`
 
 - The `ELSE` clause is optional
 - A `then-item` can be a String or a cell: `:IF <cell1> [condition] ('then-item')` or `:IF <cell1> [condition] (<cell2>)`
-- All cells inside a condtion support all filters
+- All cells inside a condition support all filters
 
 _(💡  If any of your conditions evaluate to `SKIP_THIS_LINE` then the entire line won't be exported in the output)_
 
@@ -226,9 +229,9 @@ Checks if the cell starts with a given string.
 Checks if the cell ends with a given string.
 - `:IF <cell1> ENDS_WITH|'end' (<cell2>)`
 
-#### `CONTAINS|'happieness'`
+#### `CONTAINS|'happiness'`
 Checks if the cell contains a given string.
-- `:IF <cell1> CONTAINS|'happieness' (<cell2>)`
+- `:IF <cell1> CONTAINS|'happiness' (<cell2>)`
 
 #### `== 'this item`
 Checks if the cell is equal to a given string.
@@ -261,7 +264,7 @@ Options:
   -o <file>, --output <file>
         Specify the output file to write results to.
   -c <file>, --config <file>
-        Specify the config file to determin what the output format is.
+        Specify the config file to determine what the output format is.
   -v, -V, --version
         Display the program's version information.
   -h, --help
