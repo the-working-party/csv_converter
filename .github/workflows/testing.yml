@@ -1,0 +1,72 @@
+name: Testing
+
+defaults:
+  run:
+    shell: bash
+
+on:
+  push:
+    branches:
+      - "released"
+  pull_request:
+    branches:
+      - "released"
+
+jobs:
+  lint-rust:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Tree files
+        run: |
+          sudo apt-get -y install tree & which tree
+          tree -I "node_modules*|.git*"
+
+      - name: Check formatting
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+
+      - name: Annotate commit with clippy warnings
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  test-rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      OS: ${{ matrix.OS }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Run build
+        run: cargo build --release --verbose
+
+      - name: Run cargo tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-fail-fast -- --nocapture

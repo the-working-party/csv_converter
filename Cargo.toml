@@ -9,6 +9,7 @@ license = "GPL-3.0-or-later"
 description = "A vault GUI for your offline passwords"
 homepage = "https://github.com/the-working-party/csv_converter"
 repository = "https://github.com/the-working-party/csv_converter"
+documentation = "https://docs.rs/csv_converter/"
 keywords = [
 	"csv",
 	"convert",

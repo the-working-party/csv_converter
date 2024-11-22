@@ -4,6 +4,12 @@
 ```
 A tool to convert a CSV file into a new format
 
+<p align="center">
+	<a href="https://crates.io/crates/csv_converter"><img src="https://img.shields.io/crates/v/csv_converter.svg" alt="crates badge"></a>
+	<a href="https://crates.io/crates/csv_converter"><img src="https://docs.rs/csv_converter/badge.svg" alt="crates docs tests"></a>
+	<a href="https://github.com/dominikwilkowski/csv_converter/actions/workflows/testing.yml"><img src="https://github.com/dominikwilkowski/csv_converter/actions/workflows/testing.yml/badge.svg" alt="build status"></a>
+</p>
+
 ## Description
 
 `csv_converter` is a Rust-based CLI application designed to convert CSV files into a format compatible with
