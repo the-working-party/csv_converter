@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 
 use crate::{
-	cli::exit_with_error,
+	cli::{exit_with_error, ErrorStages},
 	config::{Item, OutputConfig},
 };
 
-pub fn run(input_line: &Vec<String>, output_config: &OutputConfig) -> Vec<Vec<String>> {
+pub fn run(input_line: &[String], output_config: &OutputConfig) -> Vec<Vec<String>> {
 	let mut new_lines = Vec::new();
 	let mut skip_line = false;
 	for items in &output_config.lines {
@@ -23,9 +23,7 @@ pub fn run(input_line: &Vec<String>, output_config: &OutputConfig) -> Vec<Vec<St
 						line.push(value.to_string())
 					},
 					None => {
-						eprintln!("Process error: Cell not found '<cell{i}>'");
-						eprintln!("{input_line:?}");
-						exit_with_error(1);
+						exit_with_error(Some(format!("Cell not found \"<cell{i}>\"")), Some(ErrorStages::Process), 1);
 					},
 				},
 				Item::If(condition, then_item, else_item) => {

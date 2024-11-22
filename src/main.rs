@@ -11,7 +11,7 @@ mod csv;
 mod process;
 
 use crate::{
-	cli::{exit_with_error, help, Settings},
+	cli::{exit_with_error, help, ErrorStages, Settings},
 	config::OutputConfig,
 	csv::CsvParser,
 };
@@ -22,12 +22,12 @@ fn main() {
 
 	if settings.version {
 		println!("v{}", env!("CARGO_PKG_VERSION"));
-		exit_with_error(0);
+		exit_with_error(None, None, 0);
 	}
 
 	if settings.help {
 		println!("{}", help());
-		exit_with_error(0);
+		exit_with_error(None, None, 0);
 	}
 
 	let output_config = match File::open(&settings.output_config) {
@@ -37,23 +37,32 @@ fn main() {
 			OutputConfig::new(config_file)
 		},
 		Err(error) => {
-			eprintln!(r#"Error: Could not open output config "{}": {error}"#, settings.output);
-			exit_with_error(1);
+			exit_with_error(
+				Some(format!("Could not open output config \"{}\": \"{error}\"", settings.output)),
+				Some(ErrorStages::Io),
+				1,
+			);
 		},
 	};
 
 	let input_file = match File::open(&settings.input) {
 		Ok(file) => file,
 		Err(error) => {
-			eprintln!(r#"Error: Could not open input file "{}": {error}"#, settings.input);
-			exit_with_error(1);
+			exit_with_error(
+				Some(format!("Error: Could not open input file \"{}\": \"{error}\"", settings.output)),
+				Some(ErrorStages::Io),
+				1,
+			);
 		},
 	};
 	let total_size = match input_file.metadata() {
 		Ok(metadata) => metadata.len(),
 		Err(error) => {
-			eprintln!(r#"Error: Could not get metadata for input file "{}": {error}"#, settings.input);
-			exit_with_error(1);
+			exit_with_error(
+				Some(format!("Error: Could not get metadata for input file \"{}\": \"{error}\"", settings.output)),
+				Some(ErrorStages::Io),
+				1,
+			);
 		},
 	};
 	let reader = BufReader::new(input_file);
@@ -61,8 +70,11 @@ fn main() {
 	let output_file = match File::create(&settings.output) {
 		Ok(file) => file,
 		Err(error) => {
-			eprintln!(r#"Error: Could not create output file "{}": {error}"#, settings.output);
-			exit_with_error(1);
+			exit_with_error(
+				Some(format!("Error: Could not create output file \"{}\": \"{error}\"", settings.output)),
+				Some(ErrorStages::Io),
+				1,
+			);
 		},
 	};
 	let mut writer = BufWriter::new(output_file);
@@ -83,8 +95,7 @@ fn main() {
 		};
 
 		if let Err(error) = writer.write_all(output.as_bytes()) {
-			eprintln!("Error: Failed to write to output file: {error}");
-			exit_with_error(1);
+			exit_with_error(Some(format!("Error: Failed to write to output file: \"{error}\"")), Some(ErrorStages::Io), 1);
 		}
 
 		if last_report_time.elapsed() >= Duration::from_secs(1) {
@@ -96,8 +107,7 @@ fn main() {
 	print!("\x1b[1A\x1b[0G");
 
 	if let Err(error) = writer.flush() {
-		eprintln!("Error: Failed to flush output file: {}", error);
-		exit_with_error(1);
+		exit_with_error(Some(format!("Error: Failed to flush output file: \"{error}\"")), Some(ErrorStages::Io), 1);
 	} else {
 		println!("File successfully written to {:?}\nTime: {:#?}", settings.output, time.elapsed())
 	}

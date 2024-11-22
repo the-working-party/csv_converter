@@ -1,7 +1,7 @@
 use std::{borrow::Cow, io::BufRead};
 
 use crate::{
-	cli::exit_with_error,
+	cli::{exit_with_error, ErrorStages},
 	csv::{self, CsvParser},
 };
 
@@ -31,13 +31,19 @@ impl Condition {
 		:IF <cell1> == 'blue' ('green') ELSE ('red')";
 
 		if !condition_str.starts_with("<cell") {
-			eprintln!("Condition error: Condition must start with <cell> item, was \"{condition_str}\"{usage}");
-			exit_with_error(1);
+			exit_with_error(
+				Some(format!("Condition must start with <cell> item, was \"{condition_str}\"\n{usage}")),
+				Some(ErrorStages::ConfigConditionParsing),
+				1,
+			);
 		}
 
 		if !condition_str.ends_with(")") {
-			eprintln!("Condition error: Condition must end with a then-item or an else-item, was \"{condition_str}\"{usage}");
-			exit_with_error(1);
+			exit_with_error(
+				Some(format!("Condition must end with a then-item or an else-item, was \"{condition_str}\"\n{usage}")),
+				Some(ErrorStages::ConfigConditionParsing),
+				1,
+			);
 		}
 
 		let mut condition = None;
@@ -117,18 +123,27 @@ impl Condition {
 		}
 
 		if condition.is_none() {
-			eprintln!("Condition error: Condition not found, was \"{condition_str}\"{usage}");
-			exit_with_error(1);
+			exit_with_error(
+				Some(format!("Condition not found, was \"{condition_str}\"\n{usage}")),
+				Some(ErrorStages::ConfigConditionParsing),
+				1,
+			);
 		}
 
 		if condition_item.is_none() {
-			eprintln!("Condition error: Condition item not found, was \"{condition_str}\"{usage}");
-			exit_with_error(1);
+			exit_with_error(
+				Some(format!("Condition item not found, was \"{condition_str}\"\n{usage}")),
+				Some(ErrorStages::ConfigConditionParsing),
+				1,
+			);
 		}
 
 		if then_item.is_none() {
-			eprintln!("Condition error: Then item not found, was \"{condition_str}\"{usage}");
-			exit_with_error(1);
+			exit_with_error(
+				Some(format!("Then item not found, was \"{condition_str}\"\n{usage}")),
+				Some(ErrorStages::ConfigConditionParsing),
+				1,
+			);
 		}
 
 		let condition = match condition.unwrap().as_str() {
@@ -167,40 +182,47 @@ impl Condition {
 				let modulo = c.replace("%", "").replace("  ", " ");
 				let ints = modulo.splitn(2, "=").collect::<Vec<&str>>();
 				if ints.len() != 2 {
-					eprintln!(
-						"Condition error: The modulo filter is missing divisor or remainder, was \"{modulo}\" but should be \":IF <cell1> % 2 = 0\"",
+					exit_with_error(
+						Some(format!("The modulo filter is missing divisor or remainder, was \"{modulo}\" but should be \":IF <cell1> % 2 = 0\"")),
+						Some(ErrorStages::ConfigConditionParsing),
+						1,
 					);
-					exit_with_error(1);
 				}
 				let divisor = match ints[0].trim().parse::<f64>() {
 					Ok(value) => value,
 					Err(_) => {
-						eprintln!("Condition error: The divisor of the modulo filter cannot be parsed, was \"{}\"", ints[0].trim());
-						exit_with_error(1);
+						exit_with_error(
+							Some(format!("The divisor of the modulo filter cannot be parsed, was \"{}\"", ints[0].trim())),
+							Some(ErrorStages::ConfigConditionParsing),
+							1,
+						);
 					},
 				};
 				let remainder = match ints[1].trim().parse::<f64>() {
 					Ok(value) => value,
 					Err(_) => {
-						eprintln!(
-							"Condition error: The remainder of the modulo filter cannot be parsed, was \"{}\"",
-							ints[1].trim()
+						exit_with_error(
+							Some(format!("The remainder of the modulo filter cannot be parsed, was \"{}\"", ints[1].trim())),
+							Some(ErrorStages::ConfigConditionParsing),
+							1,
 						);
-						exit_with_error(1);
 					},
 				};
 				Condition::Modulo(divisor, remainder, Box::new(condition_item.unwrap()))
 			},
 			c => {
-				eprintln!("Condition error: If condition not recognized, was \"{c}\"{usage}");
-				exit_with_error(1);
+				exit_with_error(
+					Some(format!("If condition not recognized, was \"{c}\"\n{usage}")),
+					Some(ErrorStages::ConfigConditionParsing),
+					1,
+				);
 			},
 		};
 
 		Item::If(condition, Box::new(then_item.unwrap()), else_item)
 	}
 
-	fn get_val_from_item<'a>(item: &Item, input_line: &Vec<String>) -> Cow<'a, str> {
+	fn get_val_from_item<'a>(item: &Item, input_line: &[String]) -> Cow<'a, str> {
 		match item.clone() {
 			Item::Value(v) => Cow::Owned(v),
 			Item::Cell(i, filters) => match input_line.get(i) {
@@ -214,19 +236,24 @@ impl Condition {
 					Cow::Owned(value.to_string())
 				},
 				None => {
-					eprintln!("Process error: Cell not found '<cell{i}>'");
-					eprintln!("{input_line:?}");
-					exit_with_error(1);
+					exit_with_error(
+						Some(format!("Cell not found \"<cell{i}>\"")),
+						Some(ErrorStages::ConfigConditionEvaluating),
+						1,
+					);
 				},
 			},
 			Item::If(_, _, _) => {
-				eprintln!("Condition error: Condition cannot contain a nested IF clause");
-				exit_with_error(1);
+				exit_with_error(
+					Some(String::from("Condition cannot contain a nested IF clause")),
+					Some(ErrorStages::ConfigConditionEvaluating),
+					1,
+				);
 			},
 		}
 	}
 
-	pub fn run<'a>(&self, then_item: &Item, else_item: &Option<Item>, input_line: &Vec<String>) -> Cow<'a, str> {
+	pub fn run<'a>(&self, then_item: &Item, else_item: &Option<Item>, input_line: &[String]) -> Cow<'a, str> {
 		match self {
 			Self::IsEmpty(cell) => {
 				let value = Self::get_val_from_item(cell, input_line);
@@ -328,16 +355,22 @@ impl Condition {
 				let num_a = match value_a.parse::<f64>() {
 					Ok(value) => value,
 					Err(_) => {
-						eprintln!("Condition error: The GREATER_THAN filter left number cannot be parsed, was \"{value_a}\"");
-						exit_with_error(1);
+						exit_with_error(
+							Some(format!("The GREATER_THAN condition left number cannot be parsed, was \"{value_a}\"")),
+							Some(ErrorStages::ConfigConditionEvaluating),
+							1,
+						);
 					},
 				};
 
 				let num_b = match value_b.parse::<f64>() {
 					Ok(value) => value,
 					Err(_) => {
-						eprintln!("Condition error: The GREATER_THAN filter right number cannot be parsed, was \"{value_b}\"");
-						exit_with_error(1);
+						exit_with_error(
+							Some(format!("The GREATER_THAN condition right number cannot be parsed, was \"{value_b}\"")),
+							Some(ErrorStages::ConfigConditionEvaluating),
+							1,
+						);
 					},
 				};
 
@@ -356,16 +389,22 @@ impl Condition {
 				let num_a = match value_a.parse::<f64>() {
 					Ok(value) => value,
 					Err(_) => {
-						eprintln!("Condition error: The GREATER_THAN filter left number cannot be parsed, was \"{value_a}\"");
-						exit_with_error(1);
+						exit_with_error(
+							Some(format!("The LESS_THAN condition left number cannot be parsed, was \"{value_a}\"")),
+							Some(ErrorStages::ConfigConditionEvaluating),
+							1,
+						);
 					},
 				};
 
 				let num_b = match value_b.parse::<f64>() {
 					Ok(value) => value,
 					Err(_) => {
-						eprintln!("Condition error: The GREATER_THAN filter right number cannot be parsed, was \"{value_b}\"");
-						exit_with_error(1);
+						exit_with_error(
+							Some(format!("The LESS_THAN condition right number cannot be parsed, was \"{value_b}\"")),
+							Some(ErrorStages::ConfigConditionEvaluating),
+							1,
+						);
 					},
 				};
 
@@ -383,8 +422,11 @@ impl Condition {
 				let int = match value_str.parse::<f64>() {
 					Ok(value) => value,
 					Err(_) => {
-						eprintln!("Condition error: The modulo filter cell number cannot be parsed, was \"{value_str}\"");
-						exit_with_error(1);
+						exit_with_error(
+							Some(format!("The modulo condition cell number cannot be parsed, was \"{value_str}\"")),
+							Some(ErrorStages::ConfigConditionEvaluating),
+							1,
+						);
 					},
 				};
 
@@ -464,66 +506,81 @@ impl Filter {
 				f if f.starts_with("REPLACE") => {
 					let bits = f.split("|").collect::<Vec<&str>>();
 					if bits.len() != 3 {
-						eprintln!(
-							"OutputConfig error: Invalid REPLACE filter \"{filter}\"\n\
-							Usage: REPLACE|[string]|[string]\n\
-							Example:\n\
-							cell1 = \"My csv is great\"\n\
-							<cell1 REPLACE|'great'|'awesome'>\n\
-							cell1 = \"My csv is awesome\""
+						exit_with_error(
+							Some(format!(
+								"Invalid REPLACE filter \"{filter}\"\n\
+								Usage: REPLACE|[string]|[string]\n\
+								Example:\n\
+								cell1 = \"My csv is great\"\n\
+								<cell1 REPLACE|'great'|'awesome'>\n\
+								cell1 = \"My csv is awesome\""
+							)),
+							Some(ErrorStages::ConfigFilterParsing),
+							1,
 						);
-						exit_with_error(1);
 					}
 					filters.push(Filter::Replace(bits[1].to_string(), bits[2].to_string()));
 				},
 				f if f.starts_with("APPEND") => {
 					let bits = f.split("|").collect::<Vec<&str>>();
 					if bits.len() != 2 {
-						eprintln!(
-							"OutputConfig error: Invalid APPEND filter \"{filter}\"\n\
-							Usage: REPLACE|[string]\n\
-							Example:\n\
-							cell1 = \"dark\"\n\
-							<cell1 APPEND|'-brown'>\n\
-							cell1 = \"dark-brown\""
+						exit_with_error(
+							Some(format!(
+								"Invalid APPEND filter \"{filter}\"\n\
+								Usage: REPLACE|[string]\n\
+								Example:\n\
+								cell1 = \"dark\"\n\
+								<cell1 APPEND|'-brown'>\n\
+								cell1 = \"dark-brown\""
+							)),
+							Some(ErrorStages::ConfigFilterParsing),
+							1,
 						);
-						exit_with_error(1);
 					}
 					filters.push(Filter::Append(bits[1].to_string()));
 				},
 				f if f.starts_with("PREPEND") => {
 					let bits = f.split("|").collect::<Vec<&str>>();
 					if bits.len() != 2 {
-						eprintln!(
-							"OutputConfig error: Invalid PREPEND filter \"{filter}\"\n\
-							Usage: PREPEND|[string]\n\
-							Example:\n\
-							cell1 = \"Bond\"\n\
-							<cell1 PREPEND|'James '>\n\
-							cell1 = \"James Bond\""
+						exit_with_error(
+							Some(format!(
+								"Invalid PREPEND filter \"{filter}\"\n\
+								Usage: PREPEND|[string]\n\
+								Example:\n\
+								cell1 = \"Bond\"\n\
+								<cell1 PREPEND|'James '>\n\
+								cell1 = \"James Bond\""
+							)),
+							Some(ErrorStages::ConfigFilterParsing),
+							1,
 						);
-						exit_with_error(1);
 					}
 					filters.push(Filter::Prepend(bits[1].to_string()));
 				},
 				f if f.starts_with("SPLIT") => {
 					let bits = f.split("|").collect::<Vec<&str>>();
 					if bits.len() != 3 {
-						eprintln!(
-							"OutputConfig error: Invalid SPLIT filter \"{filter}\"\n\
-							Usage: SPLIT|[string]|[number]\n\
-							Example:\n\
-							cell1 = \"one,two,three,four\"\n\
-							<cell1 SPLIT|','|3>\n\
-							cell1 = \"two\""
+						exit_with_error(
+							Some(format!(
+								"Invalid SPLIT filter \"{filter}\"\n\
+								Usage: SPLIT|[string]|[number]\n\
+								Example:\n\
+								cell1 = \"one,two,three,four\"\n\
+								<cell1 SPLIT|','|3>\n\
+								cell1 = \"two\""
+							)),
+							Some(ErrorStages::ConfigFilterParsing),
+							1,
 						);
-						exit_with_error(1);
 					}
 					let index = match bits[2].parse::<usize>() {
 						Ok(n) => n,
 						Err(_) => {
-							eprintln!(r#"OutputConfig error: Invalid SPLIT index "{}""#, bits[2]);
-							exit_with_error(1);
+							exit_with_error(
+								Some(format!("Invalid SPLIT index \"{}\"", bits[2])),
+								Some(ErrorStages::ConfigFilterParsing),
+								1,
+							);
 						},
 					};
 					filters.push(Filter::Split(bits[1].to_string(), index));
@@ -531,33 +588,42 @@ impl Filter {
 				f if f.starts_with("SUB_STRING") => {
 					let bits = f.split("|").collect::<Vec<&str>>();
 					if bits.len() != 2 && bits.len() != 3 {
-						eprintln!(
-							"OutputConfig error: Invalid SUB_STRING filter \"{filter}\"\n\
-							Usage: SUB_STRING|[number]|[number optional]\n\
-							Example:\n\
-							cell1 = \"The Working Party\"\n\
-							<cell1 SPLIT|4>\n\
-							cell1 = \"Working Party\"\n\n\
-							\
-							cell1 = \"The Working Party\"\n\
-							<cell1 SPLIT|4|7>\n\
-							cell1 = \"Working\""
+						exit_with_error(
+							Some(format!(
+								"Invalid SUB_STRING filter \"{filter}\"\n\
+								Usage: SUB_STRING|[number]|[number optional]\n\
+								Example:\n\
+								cell1 = \"The Working Party\"\n\
+								<cell1 SPLIT|4>\n\
+								cell1 = \"Working Party\"\n\n\
+								\
+								cell1 = \"The Working Party\"\n\
+								<cell1 SPLIT|4|7>\n\
+								cell1 = \"Working\""
+							)),
+							Some(ErrorStages::ConfigFilterParsing),
+							1,
 						);
-						exit_with_error(1);
 					}
 					let start = match bits[1].parse::<usize>() {
 						Ok(n) => n,
 						Err(_) => {
-							eprintln!(r#"OutputConfig error: Invalid SUB_STRING start "{}""#, bits[1]);
-							exit_with_error(1);
+							exit_with_error(
+								Some(format!("Invalid SUB_STRING start \"{}\"", bits[1])),
+								Some(ErrorStages::ConfigFilterParsing),
+								1,
+							);
 						},
 					};
 					let end = if bits.len() == 3 {
 						match bits[2].parse::<usize>() {
 							Ok(n) => Some(n),
 							Err(_) => {
-								eprintln!(r#"OutputConfig error: Invalid SUB_STRING start "{}""#, bits[2]);
-								exit_with_error(1);
+								exit_with_error(
+									Some(format!("Invalid SUB_STRING start \"{}\"", bits[1])),
+									Some(ErrorStages::ConfigFilterParsing),
+									1,
+								);
 							},
 						}
 					} else {
@@ -643,13 +709,15 @@ impl Item {
 					if n > 0 {
 						Item::Cell(n - 1, filter)
 					} else {
-						eprintln!(r#"OutputConfig error: Cell number must be positive for item "{input}""#);
-						exit_with_error(1);
+						exit_with_error(
+							Some(format!("Cell number must be positive for item \"{input}\"")),
+							Some(ErrorStages::ConfigParsing),
+							1,
+						);
 					}
 				},
 				Err(_) => {
-					eprintln!(r#"OutputConfig error: Invalid cell number "{input}""#);
-					exit_with_error(1);
+					exit_with_error(Some(format!("Invalid cell number \"{input}\"")), Some(ErrorStages::ConfigParsing), 1);
 				},
 			}
 		} else if let Some(condition) = input.strip_prefix(":IF ") {

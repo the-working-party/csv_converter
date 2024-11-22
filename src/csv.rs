@@ -146,7 +146,7 @@ mod tests {
 		let input_file = match File::open("tests/input.csv") {
 			Ok(file) => file,
 			Err(_) => {
-				exit_with_error(1);
+				exit_with_error(None, None, 1);
 			},
 		};
 		let reader = BufReader::new(input_file);
@@ -191,7 +191,7 @@ mod tests {
 		let input_file = match File::open("tests/config.csv") {
 			Ok(file) => file,
 			Err(_) => {
-				exit_with_error(1);
+				exit_with_error(None, None, 1);
 			},
 		};
 		let reader = BufReader::new(input_file);
@@ -218,7 +218,7 @@ mod tests {
 		let input_file = match File::open("tests/input.csv") {
 			Ok(file) => file,
 			Err(_) => {
-				exit_with_error(1);
+				exit_with_error(None, None, 1);
 			},
 		};
 		let reader = BufReader::new(input_file);

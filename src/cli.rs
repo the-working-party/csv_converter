@@ -1,3 +1,5 @@
+use CliColor::*;
+
 #[derive(Debug, Default, PartialEq)]
 pub struct Settings {
 	pub input: String,
@@ -17,8 +19,11 @@ impl Settings {
 				"-i" | "--input" => {
 					let item = args_iter.next();
 					if item.is_none() {
-						eprintln!(r#"Error: Expected an argument after "{arg}""#);
-						exit_with_error(1);
+						exit_with_error(
+							Some(format!("CLI arguments: Expected an argument after \"{arg}\"")),
+							Some(ErrorStages::Cli),
+							1,
+						);
 					} else {
 						settings.input = item.unwrap();
 					}
@@ -26,8 +31,11 @@ impl Settings {
 				"-o" | "--output" => {
 					let item = args_iter.next();
 					if item.is_none() {
-						eprintln!(r#"Error: Expected an argument after "{arg}""#);
-						exit_with_error(1);
+						exit_with_error(
+							Some(format!("CLI arguments: Expected an argument after \"{arg}\"")),
+							Some(ErrorStages::Cli),
+							1,
+						);
 					} else {
 						settings.output = item.unwrap();
 					}
@@ -35,8 +43,11 @@ impl Settings {
 				"-c" | "--config" => {
 					let item = args_iter.next();
 					if item.is_none() {
-						eprintln!(r#"Error: Expected an argument after "{arg}""#);
-						exit_with_error(1);
+						exit_with_error(
+							Some(format!("CLI arguments: Expected an argument after \"{arg}\"")),
+							Some(ErrorStages::Cli),
+							1,
+						);
 					} else {
 						settings.output_config = item.unwrap();
 					}
@@ -52,21 +63,27 @@ impl Settings {
 		}
 
 		if settings.input.is_empty() && !settings.version && !settings.help {
-			eprintln!("Error: Missing parameter 'input'");
-			println!("{}", usage());
-			exit_with_error(1);
+			exit_with_error(
+				Some(format!("CLI arguments: Missing parameter  \"input\"\n{}", usage())),
+				Some(ErrorStages::Cli),
+				1,
+			);
 		}
 
 		if settings.output.is_empty() && !settings.version && !settings.help {
-			eprintln!("Error: Missing parameter 'output'");
-			println!("{}", usage());
-			exit_with_error(1);
+			exit_with_error(
+				Some(format!("CLI arguments: Missing parameter  \"output\"\n{}", usage())),
+				Some(ErrorStages::Cli),
+				1,
+			);
 		}
 
 		if settings.output_config.is_empty() && !settings.version && !settings.help {
-			eprintln!("Error: Missing parameter 'config'");
-			println!("{}", usage());
-			exit_with_error(1);
+			exit_with_error(
+				Some(format!("CLI arguments: Missing parameter  \"config\"\n{}", usage())),
+				Some(ErrorStages::Cli),
+				1,
+			);
 		}
 
 		settings
@@ -212,10 +229,86 @@ Options:
 	)
 }
 
-pub fn exit_with_error(code: i32) -> ! {
+pub enum ErrorStages {
+	Cli,
+	ConfigParsing,
+	ConfigConditionParsing,
+	ConfigConditionEvaluating,
+	ConfigFilterParsing,
+	Process,
+	Io,
+}
+
+pub fn exit_with_error(error: Option<String>, stage: Option<ErrorStages>, code: i32) -> ! {
+	if error.is_some() && stage.is_some() {
+		let prefix = match stage.unwrap() {
+			ErrorStages::Cli => format!("{Yellow}CLI{Reset}:"),
+			ErrorStages::ConfigParsing => format!("{Yellow}Config{Reset}::{Yellow}Parsing{Reset}:"),
+			ErrorStages::ConfigConditionParsing => {
+				format!("{Yellow}Config{Reset}::{Yellow}Condition{Reset}::{Yellow}Parsing{Reset}:")
+			},
+			ErrorStages::ConfigConditionEvaluating => {
+				format!("{Yellow}Config{Reset}::{Yellow}Condition{Reset}::{Yellow}Evaluating{Reset}:")
+			},
+			ErrorStages::ConfigFilterParsing => {
+				format!("{Yellow}Config{Reset}::{Yellow}Filter{Reset}::{Yellow}Parsing{Reset}:")
+			},
+			ErrorStages::Process => format!("{Yellow}Processing{Reset}:"),
+			ErrorStages::Io => format!("{Yellow}I/O{Reset}:"),
+		};
+		eprintln!(" {Red}ERROR{Reset} {Yellow}{prefix}{Reset} {}", error.unwrap());
+	}
+
 	if cfg!(test) {
-		panic!("Process would exit with code: {}", code);
+		panic!("error=\"{}\" code=\"{code}\"", code);
 	} else {
 		std::process::exit(code);
+	}
+}
+
+#[allow(dead_code)]
+pub enum CliColor {
+	System,
+	Black,
+	Red,
+	Green,
+	Yellow,
+	Blue,
+	Magenta,
+	Cyan,
+	White,
+	Gray,
+	RedBright,
+	GreenBright,
+	YellowBright,
+	BlueBright,
+	MagentaBright,
+	CyanBright,
+	WhiteBright,
+	Reset,
+}
+
+impl std::fmt::Display for CliColor {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			CliColor::System => write!(f, "\x1b[39m"),
+			CliColor::Black => write!(f, "\x1b[30m"),
+			CliColor::Red => write!(f, "\x1b[31m"),
+			CliColor::Green => write!(f, "\x1b[32m"),
+			CliColor::Yellow => write!(f, "\x1b[33m"),
+			CliColor::Blue => write!(f, "\x1b[34m"),
+			CliColor::Magenta => write!(f, "\x1b[35m"),
+			CliColor::Cyan => write!(f, "\x1b[36m"),
+			CliColor::White => write!(f, "\x1b[37m"),
+			CliColor::Gray => write!(f, "\x1b[90m"),
+			CliColor::RedBright => write!(f, "\x1b[91m"),
+			CliColor::GreenBright => write!(f, "\x1b[92m"),
+			CliColor::YellowBright => write!(f, "\x1b[93m"),
+			CliColor::BlueBright => write!(f, "\x1b[94m"),
+			CliColor::MagentaBright => write!(f, "\x1b[95m"),
+			CliColor::CyanBright => write!(f, "\x1b[96m"),
+			CliColor::WhiteBright => write!(f, "\x1b[97m"),
+			CliColor::Reset => write!(f, "\x1b[39m"),
+		}
 	}
 }
