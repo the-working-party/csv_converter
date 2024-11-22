@@ -7,10 +7,10 @@ defaults:
 on:
   push:
     branches:
-      - "released"
+      - "main"
   pull_request:
     branches:
-      - "released"
+      - "main"
 
 jobs:
   lint-rust:
