@@ -22,6 +22,15 @@ making it easier to import massive inventories.
 - **Fast Processing**: Leverages Rust's performance to handle *very* large files efficiently.
 - **No dependencies**: This app uses no external crates.
 
+## Installation
+
+You can install `csv_converter` via Homebrew:
+
+```sh
+brew tap the-working-party/csv_converter
+brew install csv_converter
+```
+
 ## How does it work?
 
 Imagine you scrape a website with your favorite scraper and now have this huge spreadsheet with a lot of data.
@@ -278,20 +287,18 @@ Example command:
 csv_converter -i input.csv -o output.csv -c config.csv
 ```
 
-## Installation
+## Build
 
 ### Prerequisites
 
 - **Rust**: Ensure you have Rust installed.
 You can download it from [rust-lang.org](https://www.rust-lang.org/tools/install).
 
-#### Install via cargo
-
 ```sh
 cargo install csv_converter
 ```
 
-#### Build from Source
+Or you can build from the repository
 
 ```sh
 git clone https://github.com/the-working-party/csv_converter.git
