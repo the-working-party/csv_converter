@@ -1,6 +1,7 @@
 class CsvConverter < Formula
   desc "Tool to convert a CSV file into a new format"
   homepage "https://github.com/the-working-party/csv_converter"
+  # when updating version run `brew install --build-from-source ./csv_converter.rb` to test locally first
   url "https://github.com/the-working-party/csv_converter/archive/refs/tags/v1.0.1.tar.gz"
   sha256 "40abb007b829dd2e0e2cc0598a00c512ad8dd820eb31b2f9b0a8f2b89fa08d79"
   license "MIT"
