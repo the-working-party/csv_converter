@@ -1,6 +1,15 @@
 Name,Address,Note,HTML
-Jane Doe,"123 Main St, Apt 4","Likes to say ""Hello, World!""","<ul>
-<li>A</li>
-<li>B</li>
+Alice Wonderland,17 Rabbit Hole Rd,Always running late but gets there in the end.,<p>Chasing dreams...</p>
+Bob Builder,99 Fixit Ave,"Can he fix it? Yes, he can!","<img src=""toolbox.jpg"" alt=""Toolbox""/>"
+Charlie Brown,25 Peanuts Lane,"Good grief, he forgot his keys again.",<p><strong>Stay hopeful!</strong></p>
+Dorothy Gale,100 Yellow Brick Rd,Always over the rainbow.,
+Sherlock Holmes,221B Baker St,No case too small.,"<p><em>Elementary, my dear Watson!</em></p>"
+Ella Mentry,1 Schoolhouse Way,Loves a good pun – she's punstoppable!,"<ul>
+<li>Learning</li>
+<li>Laughing</li>
+<li>Living</li>
 </ul>"
-John Doe,42 Willborough St,He's ok,<span></span>
+Luke Skywalker,Tatooine,"May the Force be with you.""",<div class=""force""></div>
+Tony Stark,10880 Malibu Point,"Big on ideas, bigger on ego.",
+Mary Contrary,42 Garden Path,Tends to grow her own way.,<p>Blooms where she's planted.</p>
+Tim Burr,50 Forest Rd,Always falling for puns.,<p>Branching out.</p>

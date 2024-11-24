@@ -1,5 +1,21 @@
 Name,Command,Note,Address
-JANE,NEW,"Likes to say 'Hello, World!'","123 Main St, Apt 4"
-Jane,MERGE,"Likes to say ""Hello, World!""","123 Main St, Apt 4"
-JOHN,NEW,He's ok,42 Willborough St
-John,MERGE,He's ok,42 Willborough St
+ALICE,NEW,<p>Always running late but gets there in the end.</p>,17 Rabbit Hole Rd
+wonderland,MERGE,<p>Chasing dreams...</p>,
+BOB,NEW,"<p>Can he fix it? Yes, he can!</p>",99 Fixit Ave
+builder,MERGE,"<img src=""toolbox.jpg"" alt=""Toolbox""/>",
+CHARLIE,NEW,"<p>Good grief, he forgot his keys again.</p>",25 Peanuts Lane
+brown,MERGE,<p><strong>Stay hopeful!</strong></p>,
+SHERLOCK,NEW,<p>No case too small.</p>,221B Baker St
+holmes,MERGE,"<p><em>Elementary, my dear Watson!</em></p>",
+ELLA,NEW,<p>Loves a good pun – she's punstoppable!</p>,1 Schoolhouse Way
+mentry,MERGE,"<ul>
+<li>Learning</li>
+<li>Laughing</li>
+<li>Living</li>
+</ul>",
+LUKE,NEW,"<p>May the Force be with you.""</p>",Tatooine
+skywalker,MERGE,<div class=force></div>,
+MARY,NEW,<p>Tends to grow her own way.</p>,42 Garden Path
+contrary,MERGE,<p>Blooms where she's planted.</p>,
+TIM,NEW,<p>Always falling for puns.</p>,50 Forest Rd
+burr,MERGE,<p>Branching out.</p>,

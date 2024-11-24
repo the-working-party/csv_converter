@@ -183,10 +183,10 @@ mod tests {
 		assert_eq!(
 			next,
 			Some(vec![
-				String::from("Jane Doe"),
-				String::from("123 Main St, Apt 4"),
-				String::from("Likes to say \"Hello, World!\""),
-				String::from("<ul>\n<li>A</li>\n<li>B</li>\n</ul>")
+				String::from("Alice Wonderland"),
+				String::from("17 Rabbit Hole Rd"),
+				String::from("Always running late but gets there in the end."),
+				String::from("<p>Chasing dreams...</p>")
 			])
 		);
 
@@ -194,13 +194,21 @@ mod tests {
 		assert_eq!(
 			next,
 			Some(vec![
-				String::from("John Doe"),
-				String::from("42 Willborough St"),
-				String::from("He's ok"),
-				String::from("<span></span>")
+				String::from("Bob Builder"),
+				String::from("99 Fixit Ave"),
+				String::from("Can he fix it? Yes, he can!"),
+				String::from("<img src=\"toolbox.jpg\" alt=\"Toolbox\"/>")
 			])
 		);
 
+		csv_file.next();
+		csv_file.next();
+		csv_file.next();
+		csv_file.next();
+		csv_file.next();
+		csv_file.next();
+		csv_file.next();
+		csv_file.next();
 		let next = csv_file.next();
 		assert_eq!(next, None);
 
@@ -220,13 +228,13 @@ mod tests {
 			Some(vec![
 				String::from("<cell1 UPPER_CASE SPLIT|' '|0>"),
 				String::from("NEW"),
-				String::from("<cell3 REPLACE|'\"'|'\\''>"),
-				String::from("<cell2>")
+				String::from("<cell3 PREPEND|'<p>' APPEND|'</p>'>"),
+				String::from(":IF <cell4> IS_EMPTY ('SKIP_THIS_LINE') ELSE (<cell2>)")
 			])
 		);
 		let mut output = String::new();
 		export(&[next.unwrap()], &mut output);
-		assert_eq!(output, String::from("<cell1 UPPER_CASE SPLIT|' '|0>,NEW,\"<cell3 REPLACE|'\"\"'|'\\''>\",<cell2>\n"));
+		assert_eq!(output, String::from("<cell1 UPPER_CASE SPLIT|' '|0>,NEW,<cell3 PREPEND|'<p>' APPEND|'</p>'>,:IF <cell4> IS_EMPTY ('SKIP_THIS_LINE') ELSE (<cell2>)\n"));
 	}
 
 	#[test]
@@ -245,18 +253,19 @@ mod tests {
 		export(&[next.unwrap()], &mut output);
 		assert_eq!(output, String::from("Name,Address,Note,HTML\n"));
 
+		csv_file.next();
 		let next = csv_file.next();
 		export(&[next.unwrap()], &mut output);
 		assert_eq!(
 			output,
 			String::from(
-				"Jane Doe,\"123 Main St, Apt 4\",\"Likes to say \"\"Hello, World!\"\"\",\"<ul>\n<li>A</li>\n<li>B</li>\n</ul>\"\n"
+				"Bob Builder,99 Fixit Ave,\"Can he fix it? Yes, he can!\",\"<img src=\"\"toolbox.jpg\"\" alt=\"\"Toolbox\"\"/>\"\n"
 			)
 		);
 
 		let next = csv_file.next();
 		export(&[next.unwrap()], &mut output);
-		assert_eq!(output, String::from("John Doe,42 Willborough St,He's ok,<span></span>\n"));
+		assert_eq!(output, String::from("Charlie Brown,25 Peanuts Lane,\"Good grief, he forgot his keys again.\",<p><strong>Stay hopeful!</strong></p>\n"));
 	}
 
 	#[test]

@@ -24,7 +24,7 @@ making it easier to import massive inventories.
 
 ## Installation
 
-You can install `csv_converter` via Homebrew:
+You can install `csv_converter` via [Homebrew](https://brew.sh/):
 
 ```sh
 brew tap the-working-party/csv_converter
@@ -157,8 +157,6 @@ Filters allow you to make changes to the content of a cell.
 
 Syntax: `<cell[n] FILTER|'argument'|[number]>`
 
-_(💡  You can combine filters simply by adding them: `<cell1 TRIM APPEND|'!!!' UPPER_CASE>` which will give us this: `HELLO WORLD!!!`)_
-
 For the below documentation we assume `<cell1>` has the value `  Hello World  `
 
 #### `UPPER_CASE`
@@ -206,6 +204,8 @@ Returns only a part of the cell by you defining the start and optionally the end
 If the end is not given the rest of the cell will be returned.
 - `<cell1 SUB_STRING|8>` => `World  `
 - `<cell1 SUB_STRING|1|5>` => ` Hell`
+
+_(💡  You can combine filters simply by adding them: `<cell1 TRIM APPEND|'!!!' UPPER_CASE>` => `HELLO WORLD!!!`)_
 
 ## Conditions
 
