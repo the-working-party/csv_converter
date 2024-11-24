@@ -204,8 +204,8 @@ Splits the cell every time it finds the string you pass in and allows you to sel
 #### `SUB_STRING|10|5`
 Returns only a part of the cell by you defining the start and optionally the end.
 If the end is not given the rest of the cell will be returned.
-- `<cell1 SUB_STRING|1>` => `Hello World  `
-- `<cell1 SUB_STRING|1|5>` => `  Hello World  `
+- `<cell1 SUB_STRING|8>` => `World  `
+- `<cell1 SUB_STRING|1|5>` => ` Hell`
 
 ## Conditions
 
