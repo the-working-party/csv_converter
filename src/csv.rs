@@ -35,9 +35,9 @@ impl<R: BufRead> CsvParser<R> {
 	}
 
 	fn parse_csv_line(&self) -> Vec<String> {
-		let mut cell = String::new();
 		let mut in_quotes = false;
 		let mut chars = self.buffer.chars().peekable();
+		let mut cell = String::new();
 		let mut record = Vec::new();
 
 		while let Some(c) = chars.next() {
@@ -69,6 +69,8 @@ impl<R: BufRead> CsvParser<R> {
 /// Convert a two dimensional collection of Strings into a CSV compatible String
 pub fn export(records: &[Vec<String>], output: &mut String) {
 	output.clear();
+	output.reserve(records.iter().map(|line| line.len() * 32).sum());
+
 	for line in records {
 		let mut first_cell = true;
 		for cell in line {

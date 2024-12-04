@@ -9,8 +9,9 @@ use crate::{
 pub fn run(input_line: &[String], output_config: &OutputConfig) -> Vec<Vec<String>> {
 	let mut new_lines = Vec::new();
 	let mut skip_line = false;
+
 	for items in &output_config.lines {
-		let mut line: Vec<String> = Vec::new();
+		let mut line: Vec<String> = Vec::with_capacity(items.len());
 		for item in items {
 			match item {
 				Item::Cell(i, filters) => match input_line.get(*i) {

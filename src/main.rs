@@ -65,7 +65,7 @@ fn main() {
 			);
 		},
 	};
-	let reader = BufReader::new(input_file);
+	let reader = BufReader::with_capacity(64 * 1024, input_file);
 
 	let output_file = match File::create(&settings.output) {
 		Ok(file) => file,
@@ -77,7 +77,7 @@ fn main() {
 			);
 		},
 	};
-	let mut writer = BufWriter::new(output_file);
+	let mut writer = BufWriter::with_capacity(256 * 1024, output_file);
 
 	let mut is_heading = true;
 	let mut output = String::new();
